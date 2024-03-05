@@ -186,3 +186,8 @@ def compare_Zlearning_estimates(zlearning, Z_opt, Pu_opt):
 
     show_Pu(zlearning.lmdp, zlearning.Pu, print_Pu = True, plot_Pu = False, is_sparse = True)
     print("Total Absolute Error: ", np.sum(np.abs(Pu_opt[0:-4]-zlearning.Pu[0:-4])))
+
+def value_function_to_Z(Q, lmbda=1):
+    V = Q.max(axis=1)
+    Z = np.exp(V / lmbda)
+    return Z

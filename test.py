@@ -4,7 +4,7 @@ import numpy as np
 import time
 from utils import value_iteration, plot_greedy_policy, plot_value_function, plot_path, plot_episode_length, plot_episode_throughput, shortest_path_length, compare_throughputs
 from models.qlearning import QLearning, Qlearning_training
-from models.zlearning import compute_Pu_sparse, plot_sample_path, ZLearning, Zlearning_training, compare_Zlearning_estimates, show_Z, show_Pu, power_iteration
+from models.zlearning import compute_Pu_sparse, plot_sample_path, ZLearning, Zlearning_training, compare_Zlearning_estimates, show_Z, show_Pu, power_iteration, value_function_to_Z
 from scipy.sparse import csr_matrix
 from itertools import permutations
 
@@ -25,8 +25,8 @@ if __name__ == "__main__":
     print("Value iteration took: ", n_steps, " steps before converging with epsilon:", epsilon)
     print("--- %s minutes and %s seconds ---" % (int((time.time() - start_time)/60), int((time.time() - start_time) % 60)))
     opt_lengths = list(shortest_path_length(minigrid_mdp,opt_policy, s) for s in range(minigrid_mdp.n_states))
-    #plot_greedy_policy(opt_policy, minigrid_mdp, print_policy=True)
-    plot_value_function(Q, minigrid_mdp, print_values=True, file = "value_function.txt")
+    # plot_greedy_policy(opt_policy, minigrid_mdp, print_policy=True)
+    # plot_value_function(Q, minigrid_mdp, print_values=True, file = "value_function.txt")
     plot_path(minigrid_mdp, opt_policy, path = 'plots\MDP_value_iteration_path.gif')
 
     # Q-learning
@@ -47,11 +47,12 @@ if __name__ == "__main__":
 
     # Power Iteration LMDP
     e = 1e-30
+    lmbda = 1
     Z0 = np.ones(minigrid.n_states)
-    Z, n_steps = power_iteration(minigrid, lmbda = 1, epsilon=e)
+    Z, n_steps = power_iteration(minigrid, lmbda = lmbda, epsilon=e)
     print("Value iteration took: ", n_steps, " steps before converging with epsilon:", e)
     print("\n\n")
-    show_Z(Z,minigrid, print_Z=True, plot_Z = False, file = "Z_function_power_iteration_2.txt")
+    show_Z(Z,minigrid, print_Z=True, plot_Z = False, file = "Z_function_power_iteration.txt")
     PU = compute_Pu_sparse(Z, csr_matrix(minigrid.P0))
     # with open("PU_power_iteration.txt", "w") as f: # Print the transition matrix from power iteration
     #     for i in minigrid.S:
@@ -63,7 +64,7 @@ if __name__ == "__main__":
     # Embedded MDP
     mdp_minigrid = minigrid.embedding_to_MDP()
     gamma = 0.95
-    epsilon = 1e-6
+    epsilon = 1e-30
     Q0 = np.zeros((mdp_minigrid.n_states, mdp_minigrid.n_actions))
     start_time = time.time()
     Q2, greedy_policy, n_steps = value_iteration(Q0, mdp_minigrid, epsilon, gamma)
@@ -72,6 +73,8 @@ if __name__ == "__main__":
     # plot_greedy_policy(greedy_policy, mdp_minigrid, print_policy=True)
     plot_value_function(Q2, mdp_minigrid, print_values=True, file = "value_function_embedded.txt")
     plot_path(mdp_minigrid, greedy_policy, path = 'plots\MDP_embedded_value_iteration_path.gif')
+    Z2 = value_function_to_Z(Q2, lmbda = lmbda)
+    show_Z(Z2,mdp_minigrid, print_Z=True, plot_Z = False, file = "Z_function_embedded.txt")
  
     # Z-Learning
     # print("Z-learning training...")
