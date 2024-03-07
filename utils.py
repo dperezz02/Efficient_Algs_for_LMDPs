@@ -77,6 +77,7 @@ def value_iteration(Q0, env, epsilon=1e-6, gamma = 0.95, max_iters=10000):
 
     return Q, greedy_policy, n_steps
 
+
 def plot_greedy_policy(greedy_policy, mdp, estimated=False, print_policy=False):
     if print_policy: print(greedy_policy)
     states_visited = state_visited_policy(greedy_policy, mdp)

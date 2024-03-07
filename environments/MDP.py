@@ -66,21 +66,25 @@ class Minigrid_MDP(MDP):
         ]
         assert self.grid_size * self.grid_size - len(walls) == len(self.states) / self.n_orientations
         self.state_to_index = {state: index for index, state in enumerate(self.states)}
-        self.T = [s for s in self.states if self.terminal(self.state_to_index[s])]
-        self.S = [s for s in self.states if not self.terminal(self.state_to_index[s])]
+        self.T = [
+            self.state_to_index[s] for s in self.states if self.terminal(self.state_to_index[s])
+        ]
+        self.S = [
+            self.state_to_index[s] for s in self.states if not self.terminal(self.state_to_index[s])
+        ]
 
     def _create_P(self): #index and np.array can be changed
         for state in self.S:
             for action in self.actions:
-                next_state = self.state_step(state, action)
-                self.P[self.state_to_index[state]][action] = np.array([1.0 if s == next_state else 0.0 for s in self.states]) # Assuming deterministic transitions
+                next_state = self.state_step(self.states[state], action)
+                self.P[state][action] = np.array([1.0 if s == next_state else 0.0 for s in self.states]) # Assuming deterministic transitions
 
     def _reward_function(self):
         for state in self.S:
             for action in self.actions:
                 # next_state = self.state_step(state, action)
                 # pos = self.env.grid.get(next_state[0], next_state[1])
-                self.R[self.state_to_index[state]][action] =  -1.0
+                self.R[state][action] =  -1.0
 
     def _is_valid_position(self, x: int, y: int) -> bool:
         """Testing whether a coordinate is a valid location."""
