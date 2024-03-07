@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt
 from gym.wrappers import OrderEnforcing
 from environments.grid import CustomEnv
 from environments.MDP import MDP, Minigrid_MDP
-from models.zlearning import power_iteration, compute_Pu_sparse
+from lmdp_utils import power_iteration, compute_Pu_sparse
 from scipy.sparse import csr_matrix, isspmatrix_csr
 
 
@@ -182,65 +182,3 @@ class Minigrid(LMDP):
     def print_environment(self):
         print("States: ", self.states)
         print("Actions: ", self.actions)
-
-
-    # minigrid_mdp = Minigrid_MDP(grid_size=15, walls = walls)
-    # # Q-learning
-    # print("Q-learning training...")
-    # qlearning = QLearning(minigrid_mdp, gamma=0.95, learning_rate=0.25)
-    # start_time = time.time()
-    # _, _, q_lengths, q_throughputs = Qlearning_training(qlearning, n_steps=int(7e5))
-    # print("--- %s minutes and %s seconds ---" % (int((time.time() - start_time)/60), int((time.time() - start_time) % 60)))
-    # q_averaged_throughputs = plot_episode_throughput(q_throughputs, minigrid.grid_size, plot_batch=True)
-    # compare_throughputs(z_averaged_throughputs, q_averaged_throughputs, minigrid.grid_size, name1 = 'Z Learning', name2 = 'Q Learning')
-
-
-    #state = 0
-    # q = minigrid.R[state]
-    # m = np.log(minigrid.P0[state] + 1e-30)
-    # print("q =", q)
-    # print("m =", m)
-    # ones = np.ones(minigrid.n_states)
-    # c = q*ones-m
-    # print("c =", c)
-    # q2 = -np.log(np.sum(np.exp(-c)))
-    # print("q from LMDP =", q2)
-
-    # minigrid_mdp = Minigrid_MDP(grid_size=14)
-    # D = minigrid_mdp.P[state]
-    # print("D =", D)
-    # #c[c == np.inf] = -1e-10
-    # b2 = D@c
-    # print("b from LMDP =", b2)
-    # b = minigrid_mdp.R[state]
-    # print("original b from MDP =", b)
-    # c2 = np.linalg.lstsq(D, b, rcond=None)[0]
-    # #Substitute 0 with 68
-    # c2[c2 == 0] = 68
-    # print("c from MDP =", c2)
-    # c3 = np.linalg.lstsq(D, b2, rcond=None)[0]
-    # c3[c3 == 0] = 68
-    # print("c from LMDP =", c3)
-    # q4 = -np.log(np.sum(np.exp(-c3)))
-    # print("q from LMDP =", q4)
-    # q3 = -np.log(np.sum(np.exp(-c2)))
-    # print("q from MDP =", q3)
-    # #print(c)
-    # #print(c2)
-    # #print(c.dtype, c2.dtype)
-    # #print(c.shape, c2.shape)
-    # D[D == 0] = 1e-30
-    # print(np.log(D))
-    # tmp = np.sum((D)*np.log(D), axis=1)
-    # print(tmp)
-    # b3 = minigrid_mdp.R[state] - tmp
-    # print(b3)
-    # c4 = np.linalg.lstsq(D, b3, rcond=None)[0]
-    # print(c4)
-    # q5 = -np.log(np.sum(np.exp(c4)))
-    # print("q from MDP =", q5)
-
-
-   
-
-    

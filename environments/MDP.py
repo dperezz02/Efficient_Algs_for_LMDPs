@@ -163,37 +163,3 @@ class Minigrid_MDP(MDP):
     def print_environment(self):
         print("States: ", self.states)
         print("Actions: ", self.actions)
-
-
-    # P0 = np.zeros((minigrid.n_states,minigrid.n_states))
-    # R = np.zeros(minigrid.n_states)
-    # for state in range(minigrid.n_states): 
-    #     baj = minigrid.P[state]
-    #     epsilon = 1e-8
-    #     # Find columns that contain any non-zero values
-    #     cols_with_nonzero = np.any(baj != 0, axis=0)
-    #     # Substitute 0s in those columns with 'epsilon'
-    #     baj[:, cols_with_nonzero] = np.where(baj[:, cols_with_nonzero] == 0, epsilon, baj[:, cols_with_nonzero])
-    #     # Renormalize rows to sum to one
-    #     baj /= baj.sum(axis=1)[:, np.newaxis]
-    #     # Remove the zero columns
-    #     baj = baj[:, cols_with_nonzero]
-
-    #     la = -minigrid.R[state]
-    #     hia = np.sum(baj*np.log(baj), axis=1)
-    #     y = la - hia
-
-    #     baj_pinv = np.linalg.pinv(baj)
-    #     x_hat = -np.dot(baj_pinv, y)
-
-    #     q = -np.log(np.sum(np.exp(x_hat)))
-    #     x = x_hat + q
-
-    #     R[state] = -np.exp(q)
-    #     # Atribute the values in 'x' to the correct columns in 'baj'
-    #     P0[state, np.flatnonzero(cols_with_nonzero)] = np.exp(x)
-
-    # print(P0)
-    # print(R)
-
-#TODO check bigger environments (try cluster)

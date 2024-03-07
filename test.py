@@ -4,9 +4,9 @@ import numpy as np
 import time
 from utils import value_iteration, plot_greedy_policy, plot_value_function, plot_path, plot_episode_length, plot_episode_throughput, shortest_path_length, compare_throughputs
 from models.qlearning import QLearning, Qlearning_training
-from models.zlearning import compute_Pu_sparse, plot_sample_path, ZLearning, Zlearning_training, compare_Zlearning_estimates, show_Z, show_Pu, power_iteration, value_function_to_Z
+from models.zlearning import ZLearning, Zlearning_training
+from lmdp_utils import compute_Pu_sparse, plot_sample_path, compare_Zlearning_estimates, show_Z, show_Pu, power_iteration, value_function_to_Z
 from scipy.sparse import csr_matrix
-from itertools import permutations
 
 
 if __name__ == "__main__":
@@ -26,10 +26,10 @@ if __name__ == "__main__":
     print("--- %s minutes and %s seconds ---" % (int((time.time() - start_time)/60), int((time.time() - start_time) % 60)))
     opt_lengths = list(shortest_path_length(minigrid_mdp,opt_policy, s) for s in range(minigrid_mdp.n_states))
     # plot_greedy_policy(opt_policy, minigrid_mdp, print_policy=True)
-    plot_value_function(Q, minigrid_mdp, print_values=True, file = "value_function.txt")
+    #plot_value_function(Q, minigrid_mdp, print_values=True, file = "value_function.txt")
     #plot_path(minigrid_mdp, opt_policy, path = 'plots\MDP_value_iteration_path.gif')
     Z3 = value_function_to_Z(Q, lmbda = 1)
-    show_Z(Z3,minigrid_mdp, print_Z=True, plot_Z = True, file = "Z_function_fromQ.txt")
+    #show_Z(Z3,minigrid_mdp, print_Z=True, plot_Z = True, file = "Z_function_fromQ.txt")
 
     # Q-learning
     # print("Q-learning training...")
@@ -56,10 +56,10 @@ if __name__ == "__main__":
     print("\n\n")
     #show_Z(Z,minigrid, print_Z=True, plot_Z = True, file = "Z_function_power_iteration.txt")
     PU = compute_Pu_sparse(Z, csr_matrix(minigrid.P0))
-    with open("PU_power_iteration.txt", "w") as f: # Print the transition matrix from power iteration
-        for i in minigrid.S:
-            for j in PU[i].indices:
-                    if PU[i,j] != 0: f.write("Pu[{}][{}]: {}\n".format(minigrid.states[i], minigrid.states[j], PU[i,j]))
+    # with open("PU_power_iteration.txt", "w") as f: # Print the transition matrix from power iteration
+    #     for i in minigrid.S:
+    #         for j in PU[i].indices:
+    #                 if PU[i,j] != 0: f.write("Pu[{}][{}]: {}\n".format(minigrid.states[i], minigrid.states[j], PU[i,j]))
     #show_Pu(minigrid, PU, print_Pu=False, plot_Pu = False, is_sparse=True)
     #plot_sample_path(minigrid, PU, path = 'plots\LMDP_power_iteration_path.gif')
 
@@ -73,16 +73,16 @@ if __name__ == "__main__":
     print("Value iteration took: ", n_steps, " steps before converging with epsilon:", epsilon)
     print("--- %s minutes and %s seconds ---" % (int((time.time() - start_time)/60), int((time.time() - start_time) % 60)))
     # plot_greedy_policy(greedy_policy, mdp_minigrid, print_policy=True)
-    plot_value_function(Q2, mdp_minigrid, print_values=True, file = "value_function_embedded.txt")
+    #plot_value_function(Q2, mdp_minigrid, print_values=True, file = "value_function_embedded.txt")
     #plot_path(mdp_minigrid, greedy_policy, path = 'plots\MDP_embedded_value_iteration_path.gif')
     Z2 = value_function_to_Z(Q2, lmbda = lmbda)
-    show_Z(Z,minigrid, print_Z=True, plot_Z = True, file = "Z_function_power_iteration.txt")
-    show_Z(Z2,mdp_minigrid, print_Z=True, plot_Z = True, file = "Z_function_embedded.txt")
+    # show_Z(Z,minigrid, print_Z=True, plot_Z = True, file = "Z_function_power_iteration.txt")
+    # show_Z(Z2,mdp_minigrid, print_Z=True, plot_Z = True, file = "Z_function_embedded.txt")
     PU2 = compute_Pu_sparse(Z2, csr_matrix(minigrid.P0))
-    with open("PU_power_iteration_embedded.txt", "w") as f: # Print the transition matrix from power iteration
-        for i in minigrid.S:
-            for j in PU2[i].indices:
-                    if PU2[i,j] != 0: f.write("Pu[{}][{}]: {}\n".format(minigrid.states[i], minigrid.states[j], PU2[i,j]))
+    # with open("PU_power_iteration_embedded.txt", "w") as f: # Print the transition matrix from power iteration
+    #     for i in minigrid.S:
+    #         for j in PU2[i].indices:
+    #                 if PU2[i,j] != 0: f.write("Pu[{}][{}]: {}\n".format(minigrid.states[i], minigrid.states[j], PU2[i,j]))
  
     # Z-Learning
     # print("Z-learning training...")
