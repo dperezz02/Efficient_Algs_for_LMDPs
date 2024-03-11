@@ -1,5 +1,5 @@
 import numpy as np
-from lmdp_utils import compute_Pu_sparse
+from lmdp_plots import compute_Pu_sparse
 from scipy.sparse import csr_matrix
 
 #-------------------------------

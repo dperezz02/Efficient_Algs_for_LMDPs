@@ -5,7 +5,7 @@ import time
 from utils import value_iteration, plot_greedy_policy, plot_value_function, plot_path, plot_episode_length, plot_episode_throughput, shortest_path_length, compare_throughputs
 from models.qlearning import QLearning, Qlearning_training
 from models.zlearning import ZLearning, Zlearning_training
-from lmdp_utils import compute_Pu_sparse, plot_sample_path, compare_Zlearning_estimates, show_Z, show_Pu
+from lmdp_plots import LMDP_plots
 from scipy.sparse import csr_matrix
 
 

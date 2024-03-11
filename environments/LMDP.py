@@ -3,7 +3,6 @@ import matplotlib.pyplot as plt
 from gym.wrappers import OrderEnforcing
 from environments.grid import CustomEnv
 from environments.MDP import MDP, Minigrid_MDP
-from lmdp_utils import compute_Pu_sparse
 from scipy.sparse import csr_matrix, isspmatrix_csr
 
 
@@ -25,7 +24,7 @@ class LMDP:
         reward = self.R[next_state]
         return next_state, reward, self.terminal(next_state)
     
-    def power_iteration(self, lmbda, epsilon=1e-10):
+    def power_iteration(self, lmbda = 1, epsilon = 1e-10):
         Z = np.ones(self.n_states)
         V_diff = np.arange(self.n_states)
         n_steps = 0
@@ -43,14 +42,28 @@ class LMDP:
 
         return Z, n_steps
     
+    def compute_Pu(self, Z, sparse = True):
+        if sparse:
+            Pu = self.P0.multiply(Z) # Element-wise multiplication of P0 and Z
+            # Normalize each row of the matrix
+            row_sums = Pu.sum(axis=1)
+            Pu = Pu.multiply(csr_matrix(1.0 / row_sums))
+        else:
+            Pu = self.P0 * Z  # Element-wise multiplication of P0 and Z
+            # Normalize each row of the matrix
+            row_sums = Pu.sum(axis=1, keepdims=True)
+            Pu /= row_sums
+        return Pu
+    
     def Z_to_V(self, Z, lmbda = 1):
         V = lmbda * np.log(Z)
         return V
   
-    #TODO: CHeck embeddings. Z LMDP must be equal to Z from V from embedded MDP from LMDP
+    #TODO: Check embeddings. Z LMDP must be equal to Z from V from embedded MDP from LMDP
     def embedding_to_MDP(self):
         mdp = MDP(self.n_states, self.n_nonterminal_states, self.n_actions)
-        Pu = find_optimal_Pu(self)
+        Z_opt, _ = self.power_iteration()
+        Pu = self.compute_Pu(Z_opt)
 
         for i in range(mdp.n_states):
             mdp.R[i, :] = self.R[i]
@@ -60,11 +73,6 @@ class LMDP:
                     mdp.P[i, a, (Pu[i].indices)] = np.roll(data,a)
 
         return mdp
-
-def find_optimal_Pu(lmdp: LMDP, epsilon=1e-30, lmbda=1):
-    Z_opt, _ =  power_iteration(lmdp, lmbda=lmbda, epsilon=epsilon)
-    Pu = compute_Pu_sparse(Z_opt, csr_matrix(lmdp.P0))
-    return Pu
     
 class Minigrid(LMDP):
 
