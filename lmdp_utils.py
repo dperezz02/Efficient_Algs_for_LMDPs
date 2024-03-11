@@ -3,23 +3,6 @@ import matplotlib.pyplot as plt
 from scipy.sparse import csr_matrix
 import imageio
 import os
-#TODO: convert to V to compare epsilon as in value iteration.
-def power_iteration(env, lmbda, epsilon=1e-30):
-    Z = np.ones(env.n_states)
-    Z_diff = np.arange(env.n_states)
-    n_steps = 0
-
-    G = np.diag(np.exp(env.R[env.S] / lmbda))
-    ZT = np.exp(env.R[env.T] / lmbda)
-
-    while max(Z_diff) - min(Z_diff) > epsilon:
-        TZ = G @ env.P0 @ Z
-        TZ = np.concatenate((TZ, ZT))
-        Z_diff = TZ - Z
-        Z = TZ
-        n_steps += 1
-
-    return Z, n_steps
 
 def compute_Pu(Z, P0):
     Pu = P0 * Z  # Element-wise multiplication of P0 and Z
@@ -105,11 +88,3 @@ def compare_Zlearning_estimates(zlearning, Z_opt, Pu_opt):
 
     show_Pu(zlearning.lmdp, zlearning.Pu, print_Pu = True, plot_Pu = False, is_sparse = True)
     print("Total Absolute Error: ", np.sum(np.abs(Pu_opt[0:-4]-zlearning.Pu[0:-4])))
-
-def value_function_to_Z(V, lmbda=1):
-    Z = np.exp(V / lmbda)
-    return Z
-
-def value_function_to_V(Z, lmbda=1):
-    V = lmbda*np.log(Z)
-    return V

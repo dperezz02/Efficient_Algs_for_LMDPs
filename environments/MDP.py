@@ -10,16 +10,14 @@ class MDP:
         self.n_actions = n_actions
         self.P = np.zeros((n_nonterminal_states, n_actions, n_states))
         self.R = np.zeros((n_states, n_actions))
-        #self.T = []
+        self.T = [] # Terminal states
         self.s0 = 0 
 
     def act(self, current_state, action):
         next_state = np.random.choice(self.n_states, p=self.P[current_state, action]) 
         reward = self.R[current_state, action]
-        return next_state, reward, self.terminal(next_state)
-    
-    def terminal(self, state): #Deleted because of self.T?
-        raise NotImplementedError
+        terminal = next_state in self.T
+        return next_state, reward, terminal
     
 class Minigrid_MDP(MDP):
 

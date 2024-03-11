@@ -5,7 +5,7 @@ import time
 from utils import value_iteration, plot_greedy_policy, plot_value_function, plot_path, plot_episode_length, plot_episode_throughput, shortest_path_length, compare_throughputs
 from models.qlearning import QLearning, Qlearning_training
 from models.zlearning import ZLearning, Zlearning_training
-from lmdp_utils import compute_Pu_sparse, plot_sample_path, compare_Zlearning_estimates, show_Z, show_Pu, power_iteration, value_function_to_Z, value_function_to_V
+from lmdp_utils import compute_Pu_sparse, plot_sample_path, compare_Zlearning_estimates, show_Z, show_Pu
 from scipy.sparse import csr_matrix
 
 
@@ -43,27 +43,25 @@ if __name__ == "__main__":
     # q_averaged_throughputs = plot_episode_throughput(throughputs, shortest_path_length(minigrid_mdp,opt_policy), plot_batch=True)
 
     # LMDP
-    # minigrid = Minigrid(grid_size=3, walls=walls)
+    minigrid = Minigrid(grid_size=17, walls=walls)
 
-    # # Power Iteration LMDP
-    # e = 1e-34
-    # lmbda = 1
-    # Z0 = np.ones(minigrid.n_states)
-    # Z, n_steps = power_iteration(minigrid, lmbda = lmbda, epsilon=e)
-    # print("Power iteration took: ", n_steps, " steps before converging with epsilon:", e)
-    # print("\n\n")
-    # #show_Z(Z,minigrid, print_Z=True, plot_Z = False, file = "Z_function_power_iteration3.txt")
-    # print(Z)
-    # print(value_function_to_V(Z,1))
-    # print(value_function_to_Z(value_function_to_V(Z,1),1))
-    # print(value_function_to_Z(value_function_to_V(Z,1),1)-Z)
-    #V2 = value_function_to_V(Z,1)
-    #print(V2)
-    # PU = compute_Pu_sparse(Z, csr_matrix(minigrid.P0))
-    # with open("PU_power_iteration.txt", "w") as f: # Print the transition matrix from power iteration
-    #     for i in minigrid.S:
-    #         for j in PU[i].indices:
-    #                 if PU[i,j] != 0: f.write("Pu[{}][{}]: {}\n".format(minigrid.states[i], minigrid.states[j], PU[i,j]))
+    # Power Iteration LMDP
+    e = 1e-10
+    lmbda = 1
+    Z0 = np.ones(minigrid.n_states)
+    Z, n_steps = minigrid.power_iteration(lmbda = lmbda, epsilon=e)
+    print("Power iteration took: ", n_steps, " steps before converging with epsilon:", e)
+    print("\n\n")
+    show_Z(Z,minigrid, print_Z=True, plot_Z = False, file = "Z_function_power_iteration.txt")
+    # V2 = Z_to_V(Z,1)
+    # with open("V2.txt", "w") as f:
+    #     for s in range(minigrid.n_states):
+    #         f.write("V({}): {}\n".format(minigrid.states[s], V2[s]))
+    PU = compute_Pu_sparse(Z, csr_matrix(minigrid.P0))
+    with open("PU_power_iteration.txt", "w") as f: # Print the transition matrix from power iteration
+        for i in minigrid.S:
+            for j in PU[i].indices:
+                    if PU[i,j] != 0: f.write("Pu[{}][{}]: {}\n".format(minigrid.states[i], minigrid.states[j], PU[i,j]))
     # #show_Pu(minigrid, PU, print_Pu=False, plot_Pu = False, is_sparse=True)
     # #plot_sample_path(minigrid, PU, path = 'plots\LMDP_power_iteration_path.gif')
 

@@ -3,17 +3,18 @@ import matplotlib.pyplot as plt
 from gym.wrappers import OrderEnforcing
 from environments.grid import CustomEnv
 from environments.MDP import MDP, Minigrid_MDP
-from lmdp_utils import power_iteration, compute_Pu_sparse
+from lmdp_utils import compute_Pu_sparse
 from scipy.sparse import csr_matrix, isspmatrix_csr
 
 
 class LMDP:
-    def __init__(self, n_states, n_nonterminal_states, n_actions):
+    def __init__(self, n_states, n_terminal_states, n_actions):
         self.n_states = n_states
-        self.n_nonterminal_states = n_nonterminal_states
+        self.n_nonterminal_states = n_states - n_terminal_states
         self.n_actions = n_actions
-        self.P0 = np.zeros((n_nonterminal_states, n_states))
+        self.P0 = np.zeros((self.n_nonterminal_states, n_states))
         self.R = np.zeros(n_states)
+        self.T = [] # Terminal states
         self.s0 = 0 
 
     def act(self, current_state, P): 
@@ -23,9 +24,29 @@ class LMDP:
             next_state = np.random.choice(self.n_states, p=P[current_state])
         reward = self.R[next_state]
         return next_state, reward, self.terminal(next_state)
+    
+    def power_iteration(self, lmbda, epsilon=1e-10):
+        Z = np.ones(self.n_states)
+        V_diff = np.arange(self.n_states)
+        n_steps = 0
+        
+        nonterminal_states = [i for i in range(self.n_states) if i not in self.T]
+        G = np.diag(np.exp(self.R[nonterminal_states] / lmbda))
+        ZT = np.exp(self.R[self.T] / lmbda)
+
+        while max(V_diff) - min(V_diff) > epsilon:
+            TZ = G @ self.P0 @ Z
+            TZ = np.concatenate((TZ, ZT))
+            V_diff = self.Z_to_V(TZ) - self.Z_to_V(Z)
+            Z = TZ
+            n_steps += 1
+
+        return Z, n_steps
+    
+    def Z_to_V(self, Z, lmbda = 1):
+        V = lmbda * np.log(Z)
+        return V
   
-    def terminal(self, state):
-        raise NotImplementedError
     #TODO: CHeck embeddings. Z LMDP must be equal to Z from V from embedded MDP from LMDP
     def embedding_to_MDP(self):
         mdp = MDP(self.n_states, self.n_nonterminal_states, self.n_actions)
@@ -61,13 +82,11 @@ class Minigrid(LMDP):
     def __init__(self, grid_size = 14, walls = []):
         self.grid_size = grid_size
         self.n_orientations = 4
-        self.actions = list(range(3))
-        #TODO: Finish adaptations from MDP. Compare Z Learning - Q Learning convergence. Check value function. Fix Z for terminal states. Check embbedding value functions.
-
+        super().__init__(n_states = self.n_orientations*(grid_size*grid_size - len(walls)), n_terminal_states = self.n_orientations, n_actions = 3)
+        self.actions = list(range(self.n_actions))
         self._create_environment(grid_size, walls)
-        super().__init__(n_states = len(self.states), n_nonterminal_states = len(self.S), n_actions = len(self.actions))
         self.n_cells = int(self.n_states / self.n_orientations)
-        
+        #TODO: Finish adaptations from MDP. Compare Z Learning - Q Learning convergence. Check value function. Fix Z for terminal states. Check embbedding value functions.
         self.create_P0()
         self.reward_function()
 
