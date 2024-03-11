@@ -22,7 +22,8 @@ class LMDP:
         else:
             next_state = np.random.choice(self.n_states, p=P[current_state])
         reward = self.R[next_state]
-        return next_state, reward, self.terminal(next_state)
+        terminal = next_state in self.T
+        return next_state, reward, terminal
     
     def power_iteration(self, lmbda = 1, epsilon = 1e-10):
         Z = np.ones(self.n_states)
@@ -44,7 +45,8 @@ class LMDP:
     
     def compute_Pu(self, Z, sparse = True):
         if sparse:
-            Pu = self.P0.multiply(Z) # Element-wise multiplication of P0 and Z
+            P0 = csr_matrix(self.P0)
+            Pu = P0.multiply(Z) # Element-wise multiplication of P0 and Z
             # Normalize each row of the matrix
             row_sums = Pu.sum(axis=1)
             Pu = Pu.multiply(csr_matrix(1.0 / row_sums))

@@ -4,11 +4,11 @@ from gym.wrappers import OrderEnforcing
 from environments.grid import CustomEnv
 
 class MDP:
-    def __init__(self, n_states, n_nonterminal_states, n_actions):
+    def __init__(self, n_states, n_terminal_states, n_actions):
         self.n_states = n_states
-        self.n_nonterminal_states = n_nonterminal_states
+        self.n_nonterminal_states = n_states - n_terminal_states
         self.n_actions = n_actions
-        self.P = np.zeros((n_nonterminal_states, n_actions, n_states))
+        self.P = np.zeros((self.n_nonterminal_states, n_actions, n_states))
         self.R = np.zeros((n_states, n_actions))
         self.T = [] # Terminal states
         self.s0 = 0 
@@ -35,10 +35,9 @@ class Minigrid_MDP(MDP):
     def __init__(self, grid_size = 14, walls = [], env = None, P = None, R = None):
         self.grid_size = grid_size
         self.n_orientations = 4
-        self.actions = list(range(3))
-
+        super().__init__(n_states = self.n_orientations*(grid_size*grid_size - len(walls)), n_terminal_states = self.n_orientations, n_actions = 3)
+        self.actions = list(range(self.n_actions))
         self._create_environment(grid_size, walls, env)
-        super().__init__(n_states = len(self.states), n_nonterminal_states = len(self.S), n_actions = len(self.actions))
         self.n_cells = int(self.n_states / self.n_orientations)
 
         if P is None:

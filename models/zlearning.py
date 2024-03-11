@@ -1,5 +1,4 @@
 import numpy as np
-from lmdp_plots import compute_Pu_sparse
 from scipy.sparse import csr_matrix
 
 #-------------------------------
@@ -45,7 +44,7 @@ class ZLearning:
         self.Z[self.state] += self.learning_rate * delta
 
         # Compute Pu
-        self.Pu = compute_Pu_sparse(self.Z,self.P0)
+        self.Pu = self.lmdp.compute_Pu(self.Z)
 
         # Sample next state
         self.state, _ , self.episode_end = self.lmdp.act(self.state, self.Pu)
@@ -79,6 +78,6 @@ def Zlearning_training(zlearning: ZLearning, opt_lengths, n_steps = int(5e5)):
 
     if l0 != tt: z_throughputs[l0:tt] = z_throughputs[l0-1]
 
-    zlearning.Pu = compute_Pu_sparse(zlearning.Z,zlearning.P0)
+    zlearning.Pu = zlearning.lmdp.compute_Pu(zlearning.Z)
 
     return Z_est, z_lengths, z_throughputs
