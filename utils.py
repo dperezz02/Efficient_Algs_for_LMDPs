@@ -41,7 +41,7 @@ def minigrid_demo(minigrid):
             print("Invalid action.")
         a = input(f"       Select an Action from {minigrid.actions} (default {action}, press 'e' to exit): ")
 
-
+#TODO: reshape P, Q and R to SAxS instead of SxAxS
 def bellman_operator(Q, env, gamma=0.95):
     TQ = np.zeros((env.n_states, env.n_actions))
 
@@ -61,7 +61,8 @@ def bellman_operator(Q, env, gamma=0.95):
 
     return TQ, greedy_policy
 
-def value_iteration(Q0, env, epsilon=1e-6, gamma = 0.95, max_iters=10000):
+def value_iteration(env, epsilon=1e-6, gamma = 0.95, max_iters=10000):
+    Q0 = np.zeros((env.n_states, env.n_actions))
     n_steps = 0
     Q = Q0
 
@@ -69,7 +70,7 @@ def value_iteration(Q0, env, epsilon=1e-6, gamma = 0.95, max_iters=10000):
         n_steps += 1
         TQ, greedy_policy = bellman_operator(Q, env, gamma)
 
-        err = np.abs(TQ - Q).max()
+        err = np.abs(TQ.max(axis=1) - Q.max(axis=1)).max()
         if err < epsilon:
             return TQ, greedy_policy, n_steps
 

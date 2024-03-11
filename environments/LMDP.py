@@ -26,7 +26,7 @@ class LMDP:
   
     def terminal(self, state):
         raise NotImplementedError
-    
+    #TODO: CHeck embeddings. Z LMDP must be equal to Z from V from embedded MDP from LMDP
     def embedding_to_MDP(self):
         mdp = MDP(self.n_states, self.n_nonterminal_states, self.n_actions)
         Pu = find_optimal_Pu(self)
