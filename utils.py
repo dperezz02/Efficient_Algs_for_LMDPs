@@ -41,43 +41,27 @@ def minigrid_demo(minigrid):
             print("Invalid action.")
         a = input(f"       Select an Action from {minigrid.actions} (default {action}, press 'e' to exit): ")
 
-#TODO: reshape P, Q and R to SAxS instead of SxAxS
-def bellman_operator(Q, env, gamma=0.95):
-    TQ = np.zeros((env.n_states, env.n_actions))
 
-    greedy_policy = np.zeros(env.n_states, dtype=int)
-
-    for s in range(env.n_states):
-        if env.terminal(s):
-            TQ[s,:] = env.R[s,:]
-        else:
-            for a in env.actions:
-                prob = env.P[s, a]
-                reward = float(env.R[s][a])
-
-                TQ[s, a] = np.sum(prob * (reward + gamma * Q.max(axis=1)))
-
-    greedy_policy = np.argmax(TQ, axis=1)
-
-    return TQ, greedy_policy
-
-def value_iteration(env, epsilon=1e-6, gamma = 0.95, max_iters=10000):
-    Q0 = np.zeros((env.n_states, env.n_actions))
+def value_iteration(env, epsilon=1e-10, gamma = 0.95):
+    Q = np.zeros((env.n_states, env.n_actions))
+    V_diff = np.arange(env.n_states)
     n_steps = 0
-    Q = Q0
 
-    for i in range(max_iters):
-        n_steps += 1
-        TQ, greedy_policy = bellman_operator(Q, env, gamma)
+    nonterminal_states = [i for i in range(env.n_states) if i not in env.T]
+    R = env.R[nonterminal_states]
+    P = gamma * env.P[nonterminal_states]
+    QT = env.R[env.T]
 
-        err = np.abs(TQ.max(axis=1) - Q.max(axis=1)).max()
-        if err < epsilon:
-            return TQ, greedy_policy, n_steps
-
+    while max(V_diff) - min(V_diff) > epsilon:
+        TQ = R + P @ Q.max(axis=1)
+        TQ = np.concatenate((TQ, QT))
+        V_diff = TQ.max(axis=1) - Q.max(axis=1)
         Q = TQ
+        n_steps += 1
+
+    greedy_policy = np.argmax(Q, axis=1)
 
     return Q, greedy_policy, n_steps
-
 
 def plot_greedy_policy(greedy_policy, mdp, estimated=False, print_policy=False):
     if print_policy: print(greedy_policy)
