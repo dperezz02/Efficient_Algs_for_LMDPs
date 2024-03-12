@@ -2,10 +2,10 @@ from environments.MDP import Minigrid_MDP
 from environments.LMDP import Minigrid
 import numpy as np
 import time
-from utils import plot_greedy_policy, plot_value_function, plot_path, plot_episode_length, plot_episode_throughput, shortest_path_length, compare_throughputs
+from utils import Minigrid_MDP_Plots, plot_episode_length, plot_episode_throughput, compare_throughputs
 from models.qlearning import QLearning, Qlearning_training
 from models.zlearning import ZLearning, Zlearning_training
-from lmdp_plots import LMDP_plots
+from lmdp_plots import Minigrid_LMDP_Plots
 from scipy.sparse import csr_matrix
 
 
@@ -14,6 +14,7 @@ if __name__ == "__main__":
     walls = [(14,1), (1,8), (5, 5), (12, 5), (8, 7), (2,5), (3,5), (4,5), (6,5), (7,5), (8,5), (9,5), (10,5), (11,5), (13,5), (15,9)]
     # MDP
     minigrid_mdp = Minigrid_MDP(grid_size=grid_size, walls = walls)
+    minigrid_mdp_plots = Minigrid_MDP_Plots(minigrid_mdp)
     minigrid_mdp.print_attributes()
 
     gamma = 1
@@ -24,9 +25,9 @@ if __name__ == "__main__":
     Q, opt_policy, n_steps = minigrid_mdp.value_iteration(epsilon, gamma)
     print("Value iteration took: ", n_steps, " steps before converging with epsilon:", epsilon)
     print("--- %s minutes and %s seconds ---" % (int((time.time() - start_time)/60), int((time.time() - start_time) % 60)))
-    opt_lengths = list(shortest_path_length(minigrid_mdp,opt_policy, s) for s in range(minigrid_mdp.n_states))
+    opt_lengths = list(minigrid_mdp.shortest_path_length(opt_policy, s) for s in range(minigrid_mdp.n_states))
     # plot_greedy_policy(opt_policy, minigrid_mdp, print_policy=True)
-    plot_value_function(Q, minigrid_mdp, print_values=True, file = "value_function.txt")
+    minigrid_mdp_plots.plot_value_function(Q, print_values=True, file = "value_function.txt")
     # #plot_path(minigrid_mdp, opt_policy, path = 'plots\MDP_value_iteration_path.gif')
 
     # Q-learning

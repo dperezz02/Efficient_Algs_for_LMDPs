@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt
 import imageio
 import os
 
-class LMDP_plots:
+class Minigrid_LMDP_Plots():
     def __init__(self, lmdp):
         self.lmdp = lmdp
     

@@ -40,6 +40,14 @@ class MDP:
 
         return Q, greedy_policy, n_steps
     
+    def shortest_path_length(self, optimal_policy, s=0):
+        done = s in self.T
+        n_steps = 0
+        while not done:
+            s, _, done = self.act(s, optimal_policy[s])
+            n_steps += 1
+        return n_steps
+    
 class Minigrid_MDP(MDP):
 
     DIR_TO_VEC = [
