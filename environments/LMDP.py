@@ -96,7 +96,7 @@ class Minigrid(LMDP):
         self.actions = list(range(self.n_actions))
         self._create_environment(grid_size, walls)
         self.n_cells = int(self.n_states / self.n_orientations)
-        #TODO: Finish adaptations from MDP. Compare Z Learning - Q Learning convergence. Check value function. Fix Z for terminal states. Check embbedding value functions.
+        #TODO: Finish adaptations from MDP. Compare Z Learning - Q Learning convergence. Check embbedding value functions.
         self.create_P0()
         self.reward_function()
 
