@@ -2,7 +2,7 @@ from environments.MDP import Minigrid_MDP
 from environments.LMDP import Minigrid
 import numpy as np
 import time
-from utils import value_iteration, plot_greedy_policy, plot_value_function, plot_path, plot_episode_length, plot_episode_throughput, shortest_path_length, compare_throughputs
+from utils import plot_greedy_policy, plot_value_function, plot_path, plot_episode_length, plot_episode_throughput, shortest_path_length, compare_throughputs
 from models.qlearning import QLearning, Qlearning_training
 from models.zlearning import ZLearning, Zlearning_training
 from lmdp_plots import LMDP_plots
@@ -21,7 +21,7 @@ if __name__ == "__main__":
 
     # Value Iteration MDP
     start_time = time.time()
-    Q, opt_policy, n_steps = value_iteration(minigrid_mdp, epsilon, gamma)
+    Q, opt_policy, n_steps = minigrid_mdp.value_iteration(epsilon, gamma)
     print("Value iteration took: ", n_steps, " steps before converging with epsilon:", epsilon)
     print("--- %s minutes and %s seconds ---" % (int((time.time() - start_time)/60), int((time.time() - start_time) % 60)))
     opt_lengths = list(shortest_path_length(minigrid_mdp,opt_policy, s) for s in range(minigrid_mdp.n_states))

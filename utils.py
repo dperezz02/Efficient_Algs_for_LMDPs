@@ -41,28 +41,6 @@ def minigrid_demo(minigrid):
             print("Invalid action.")
         a = input(f"       Select an Action from {minigrid.actions} (default {action}, press 'e' to exit): ")
 
-
-def value_iteration(env, epsilon=1e-10, gamma = 0.95):
-    Q = np.zeros((env.n_states, env.n_actions))
-    V_diff = np.arange(env.n_states)
-    n_steps = 0
-
-    nonterminal_states = [i for i in range(env.n_states) if i not in env.T]
-    R = env.R[nonterminal_states]
-    P = gamma * env.P[nonterminal_states]
-    QT = env.R[env.T]
-
-    while max(V_diff) - min(V_diff) > epsilon:
-        TQ = R + P @ Q.max(axis=1)
-        TQ = np.concatenate((TQ, QT))
-        V_diff = TQ.max(axis=1) - Q.max(axis=1)
-        Q = TQ
-        n_steps += 1
-
-    greedy_policy = np.argmax(Q, axis=1)
-
-    return Q, greedy_policy, n_steps
-
 def plot_greedy_policy(greedy_policy, mdp, estimated=False, print_policy=False):
     if print_policy: print(greedy_policy)
     states_visited = state_visited_policy(greedy_policy, mdp)

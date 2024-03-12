@@ -19,6 +19,27 @@ class MDP:
         terminal = next_state in self.T
         return next_state, reward, terminal
     
+    def value_iteration(self, epsilon=1e-10, gamma = 0.95):
+        Q = np.zeros((self.n_states, self.n_actions))
+        V_diff = np.arange(self.n_states)
+        n_steps = 0
+
+        nonterminal_states = [i for i in range(self.n_states) if i not in self.T]
+        R = self.R[nonterminal_states]
+        P = gamma * self.P[nonterminal_states]
+        QT = self.R[self.T]
+
+        while max(V_diff) - min(V_diff) > epsilon:
+            TQ = R + P @ Q.max(axis=1)
+            TQ = np.concatenate((TQ, QT))
+            V_diff = TQ.max(axis=1) - Q.max(axis=1)
+            Q = TQ
+            n_steps += 1
+
+        greedy_policy = np.argmax(Q, axis=1)
+
+        return Q, greedy_policy, n_steps
+    
 class Minigrid_MDP(MDP):
 
     DIR_TO_VEC = [
