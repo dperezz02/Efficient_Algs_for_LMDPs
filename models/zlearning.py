@@ -1,5 +1,5 @@
 import numpy as np
-from scipy.sparse import csr_matrix
+from scipy.sparse import csr_matrix, isspmatrix_csr
 
 #-------------------------------
 # Z-Learning implementation
@@ -16,8 +16,7 @@ class ZLearning:
         self.min_learning_rate = min_learning_rate
         self.learning_rate_decay = learning_rate_decay
         self.Z = np.ones(lmdp.n_states)
-        self.P0 = csr_matrix(lmdp.P0)
-        self.Pu = self.P0
+        self.Pu = self.lmdp.P0
         self.reset_randomness = reset_randomness
         self.state = self.lmdp.s0
         self.episode_end = False
@@ -28,7 +27,7 @@ class ZLearning:
         :param x: current state (in index format)
         :return: Delta update
         """
-        Gz = self.P0[x].dot(self.Z)
+        Gz = self.lmdp.P0[x].dot(self.Z)
 
         zjk = np.exp(r / self.lmbda) * Gz
 

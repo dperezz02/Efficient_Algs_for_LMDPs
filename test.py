@@ -34,7 +34,7 @@ if __name__ == "__main__":
     print("Q-learning training...")
     qlearning = QLearning(minigrid_mdp, gamma=gamma, learning_rate=1, epsilon_min = 0)
     start_time = time.time()
-    Q_est, est_policy, lengths, throughputs = Qlearning_training(qlearning, opt_lengths, n_steps=int(5e5))
+    Q_est, est_policy, lengths, throughputs = Qlearning_training(qlearning, opt_lengths, n_steps=int(3e5))
     print("--- %s minutes and %s seconds ---" % (int((time.time() - start_time)/60), int((time.time() - start_time) % 60)))
     #plot_greedy_policy(est_policy, minigrid_mdp, print_policy=True, estimated=True)
     minigrid_mdp_plots.plot_value_function(Q_est, print_values=True, file = "QLearning_value_function.txt")
@@ -53,10 +53,10 @@ if __name__ == "__main__":
     print("\n\n")
     #minigrid_plots.show_Z(Z, print_Z=True, plot_Z = False, file = "Z_function_power_iteration.txt")
     PU = minigrid.compute_Pu(Z)
-    # with open("PU_power_iteration.txt", "w") as f: # Print the transition matrix from power iteration
-    #     for i in minigrid.S:
-    #         for j in PU[i].indices:
-    #                 if PU[i,j] != 0: f.write("Pu[{}][{}]: {}\n".format(minigrid.states[i], minigrid.states[j], PU[i,j]))
+    with open("PU_power_iteration.txt", "w") as f: # Print the transition matrix from power iteration
+        for i in minigrid.S:
+            for j in PU[i].indices:
+                    if PU[i,j] != 0: f.write("Pu[{}][{}]: {}\n".format(minigrid.states[i], minigrid.states[j], PU[i,j]))
     # #show_Pu(minigrid, PU, print_Pu=False, plot_Pu = False, is_sparse=True)
     # minigrid_plots.plot_sample_path(PU, path = 'plots\LMDP_power_iteration_path.gif')
 
@@ -81,7 +81,7 @@ if __name__ == "__main__":
     #         for j in PU2[i].indices:
     #                 if PU2[i,j] != 0: f.write("Pu[{}][{}]: {}\n".format(minigrid.states[i], minigrid.states[j], PU2[i,j]))
  
-    # Z-Learning #TODO: Check why it takes so long now
+    # Z-Learning 
     import cProfile
     import pstats
     profiler = cProfile.Profile()
@@ -89,9 +89,9 @@ if __name__ == "__main__":
     print("Z-learning training...")
     zlearning = ZLearning(minigrid, lmbda=1)
     start_time = time.time()
-    Z_est, z_lengths, z_throughputs = Zlearning_training(zlearning, opt_lengths, n_steps=int(5e5))
+    Z_est, z_lengths, z_throughputs = Zlearning_training(zlearning, opt_lengths, n_steps=int(3e5))
     print("--- %s minutes and %s seconds ---" % (int((time.time() - start_time)/60), int((time.time() - start_time) % 60)))
-    print("Total Absolute Error: ", np.sum(np.abs(PU[0:-4]-zlearning.Pu[0:-4])))
+    print("Total Absolute Error: ", np.sum(np.abs(PU-zlearning.Pu)))
     profiler.disable()
     with open('profiler_stats.txt', 'w') as stream:
         # Redirect profiler output to the file
@@ -101,12 +101,12 @@ if __name__ == "__main__":
     minigrid_plots.show_Z(Z_est[-1], print_Z=True, plot_Z = False, file = "Z_function_zlearning.txt")
     minigrid_plots.plot_sample_path(zlearning.Pu, path = 'plots\LMDP_Z_learning_path.gif')
     z_averaged_throughputs = plot_episode_throughput(z_throughputs, minigrid_mdp.shortest_path_length(opt_policy), plot_batch=True)
-    # compare_throughputs(z_averaged_throughputs, q_averaged_throughputs, minigrid.grid_size, name1 = 'Z Learning', name2 = 'Q Learning')
+    compare_throughputs(z_averaged_throughputs, q_averaged_throughputs, minigrid.grid_size, name1 = 'Z Learning', name2 = 'Q Learning')
     
-    # with open("PU_zlearning", "w") as f: # Print the transition matrix from Z-learning
-    #     for i in minigrid.S:
-    #         for j in zlearning.Pu[i].indices:
-    #                 if zlearning.Pu[i,j] != 0: f.write("Pu[{}][{}]: {}\n".format(minigrid.states[i], minigrid.states[j], zlearning.Pu[i,j]))
+    with open("PU_zlearning", "w") as f: # Print the transition matrix from Z-learning
+        for i in minigrid.S:
+            for j in zlearning.Pu[i].indices:
+                    if zlearning.Pu[i,j] != 0: f.write("Pu[{}][{}]: {}\n".format(minigrid.states[i], minigrid.states[j], zlearning.Pu[i,j]))
 
     # for i in minigrid.S: # Print the transition matrix differences between Z-learning and Power Iteration
     #        for j in (PU[i].indices):

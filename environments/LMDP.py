@@ -45,12 +45,13 @@ class LMDP:
     
     def compute_Pu(self, Z, sparse = True):
         if sparse:
-            P0 = csr_matrix(self.P0)
+            P0 = csr_matrix(self.P0) if not isspmatrix_csr(self.P0) else self.P0
             Pu = P0.multiply(Z) # Element-wise multiplication of P0 and Z
             # Normalize each row of the matrix
             row_sums = Pu.sum(axis=1)
             Pu = Pu.multiply(csr_matrix(1.0 / row_sums))
         else:
+            P0 = self.P0.toarray() if isspmatrix_csr(self.P0) else self.P0
             Pu = self.P0 * Z  # Element-wise multiplication of P0 and Z
             # Normalize each row of the matrix
             row_sums = Pu.sum(axis=1, keepdims=True)
@@ -117,11 +118,13 @@ class Minigrid(LMDP):
             self.state_to_index[s] for s in self.states if not self.terminal(self.state_to_index[s])
         ]
 
-    def create_P0(self):
+    def create_P0(self, sparse = True):
         for state in self.S: #range(self.n_states): 
             for action in self.actions:
                 next_state = self.state_step(self.states[state], action)
                 self.P0[state][self.state_to_index[next_state]] += 1/self.n_actions
+        if sparse:
+            self.P0 = csr_matrix(self.P0)
 
     def reward_function(self):
         for state in self.S:
