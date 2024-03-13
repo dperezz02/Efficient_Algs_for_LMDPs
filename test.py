@@ -10,7 +10,7 @@ from scipy.sparse import csr_matrix
 
 
 if __name__ == "__main__":
-    grid_size = 3
+    grid_size = 14
     walls = []#(14,1), (1,8), (5, 5), (12, 5), (8, 7), (2,5), (3,5), (4,5), (6,5), (7,5), (8,5), (9,5), (10,5), (11,5), (13,5), (15,9)]
     # MDP
     minigrid_mdp = Minigrid_MDP(grid_size=grid_size, walls = walls)
@@ -34,14 +34,13 @@ if __name__ == "__main__":
     print("Q-learning training...")
     qlearning = QLearning(minigrid_mdp, gamma=gamma, learning_rate=1, epsilon_min = 0)
     start_time = time.time()
-    Q_est, est_policy, lengths, throughputs = Qlearning_training(qlearning, opt_lengths, n_steps=int(3e4))
+    Q_est, est_policy, lengths, throughputs = Qlearning_training(qlearning, opt_lengths, n_steps=int(5e5))
     print("--- %s minutes and %s seconds ---" % (int((time.time() - start_time)/60), int((time.time() - start_time) % 60)))
     #plot_greedy_policy(est_policy, minigrid_mdp, print_policy=True, estimated=True)
     minigrid_mdp_plots.plot_value_function(Q_est, print_values=True, file = "QLearning_value_function.txt")
     minigrid_mdp_plots.plot_path(est_policy, path = 'plots\MDP_QLearning_path.gif')
     plot_episode_length(lengths, minigrid_mdp.shortest_path_length(opt_policy), plot_batch=True)
     q_averaged_throughputs = plot_episode_throughput(throughputs, minigrid_mdp.shortest_path_length(opt_policy), plot_batch=True)
-    print(qlearning.Nsa)
 
     # LMDP
     minigrid = Minigrid(grid_size=grid_size, walls=walls)
@@ -83,16 +82,26 @@ if __name__ == "__main__":
     #                 if PU2[i,j] != 0: f.write("Pu[{}][{}]: {}\n".format(minigrid.states[i], minigrid.states[j], PU2[i,j]))
  
     # Z-Learning #TODO: Check why it takes so long now
+    import cProfile
+    import pstats
+    profiler = cProfile.Profile()
+    profiler.enable()
     print("Z-learning training...")
     zlearning = ZLearning(minigrid, lmbda=1)
     start_time = time.time()
-    Z_est, z_lengths, z_throughputs = Zlearning_training(zlearning, opt_lengths, n_steps=int(3e4))
+    Z_est, z_lengths, z_throughputs = Zlearning_training(zlearning, opt_lengths, n_steps=int(5e5))
     print("--- %s minutes and %s seconds ---" % (int((time.time() - start_time)/60), int((time.time() - start_time) % 60)))
     print("Total Absolute Error: ", np.sum(np.abs(PU[0:-4]-zlearning.Pu[0:-4])))
+    profiler.disable()
+    with open('profiler_stats.txt', 'w') as stream:
+        # Redirect profiler output to the file
+        stats = pstats.Stats(profiler, stream=stream)
+        stats.sort_stats('tottime')
+        stats.print_stats()
     minigrid_plots.show_Z(Z_est[-1], print_Z=True, plot_Z = False, file = "Z_function_zlearning.txt")
     minigrid_plots.plot_sample_path(zlearning.Pu, path = 'plots\LMDP_Z_learning_path.gif')
     z_averaged_throughputs = plot_episode_throughput(z_throughputs, minigrid_mdp.shortest_path_length(opt_policy), plot_batch=True)
-    compare_throughputs(z_averaged_throughputs, q_averaged_throughputs, minigrid.grid_size, name1 = 'Z Learning', name2 = 'Q Learning')
+    # compare_throughputs(z_averaged_throughputs, q_averaged_throughputs, minigrid.grid_size, name1 = 'Z Learning', name2 = 'Q Learning')
     
     # with open("PU_zlearning", "w") as f: # Print the transition matrix from Z-learning
     #     for i in minigrid.S:
