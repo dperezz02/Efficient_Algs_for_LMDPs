@@ -82,22 +82,12 @@ if __name__ == "__main__":
     #                 if PU2[i,j] != 0: f.write("Pu[{}][{}]: {}\n".format(minigrid.states[i], minigrid.states[j], PU2[i,j]))
  
     # Z-Learning 
-    import cProfile
-    import pstats
-    profiler = cProfile.Profile()
-    profiler.enable()
     print("Z-learning training...")
     zlearning = ZLearning(minigrid, lmbda=1)
     start_time = time.time()
     Z_est, z_lengths, z_throughputs = Zlearning_training(zlearning, opt_lengths, n_steps=int(3e5))
     print("--- %s minutes and %s seconds ---" % (int((time.time() - start_time)/60), int((time.time() - start_time) % 60)))
     print("Total Absolute Error: ", np.sum(np.abs(PU-zlearning.Pu)))
-    profiler.disable()
-    with open('profiler_stats.txt', 'w') as stream:
-        # Redirect profiler output to the file
-        stats = pstats.Stats(profiler, stream=stream)
-        stats.sort_stats('tottime')
-        stats.print_stats()
     minigrid_plots.show_Z(Z_est[-1], print_Z=True, plot_Z = False, file = "Z_function_zlearning.txt")
     minigrid_plots.plot_sample_path(zlearning.Pu, path = 'plots\LMDP_Z_learning_path.gif')
     z_averaged_throughputs = plot_episode_throughput(z_throughputs, minigrid_mdp.shortest_path_length(opt_policy), plot_batch=True)
