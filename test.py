@@ -10,8 +10,8 @@ from scipy.sparse import csr_matrix
 
 
 if __name__ == "__main__":
-    grid_size = 14
-    walls = []#(14,1), (1,8), (5, 5), (12, 5), (8, 7), (2,5), (3,5), (4,5), (6,5), (7,5), (8,5), (9,5), (10,5), (11,5), (13,5), (15,9)]
+    grid_size = 17
+    walls = [(14,1), (1,8), (5, 5), (12, 5), (8, 7), (2,5), (3,5), (4,5), (6,5), (7,5), (8,5), (9,5), (10,5), (11,5), (13,5), (15,9)]
     # MDP
     minigrid_mdp = Minigrid_MDP(grid_size=grid_size, walls = walls)
     minigrid_mdp_plots = Minigrid_MDP_Plots(minigrid_mdp)
@@ -100,6 +100,6 @@ if __name__ == "__main__":
 
     # for i in minigrid.S: # Print the transition matrix differences between Z-learning and Power Iteration
     #        for j in (PU[i].indices):
-    #             if np.abs(PU[i,j] -zlearning.Pu[i,j]) >= 0.1: 
+    #             if np.abs(PU[i,j] -zlearning.Pu[i,j]) >= 0.05: 
     #                 print("Pu[", minigrid.states[i], "][", minigrid.states[j], "]: ", PU[i,j])
     #                 print("ZLearning Pu[", minigrid.states[i], "][", minigrid.states[j], "]: ", zlearning.Pu[i,j])
