@@ -5,7 +5,8 @@ from environments.LMDP import LMDP
 class SimpleGrid(LMDP):
 
     def __init__(self, size = 2):
-        super().__init__(size * size, size * size - 1, 4)
+        super().__init__(size * size, 1, 4)
+        self.T = [size * size - 1]
         
         # construct transition probabilities
         for x in range(size):
