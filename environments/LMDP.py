@@ -64,13 +64,14 @@ class LMDP:
   
     #TODO: Check embeddings. Z LMDP must be equal to Z from V from embedded MDP from LMDP
     def embedding_to_MDP(self):
-        mdp = MDP(self.n_states, self.n_nonterminal_states, self.n_actions)
+        mdp = MDP(self.n_states, len(self.T), self.n_actions)
+        mdp.T = self.T
         Z_opt, _ = self.power_iteration()
         Pu = self.compute_Pu(Z_opt)
 
         for i in range(mdp.n_states):
             mdp.R[i, :] = self.R[i]
-            if not self.terminal(i):
+            if i not in self.T:
                 data = Pu[i].data
                 for a in range(mdp.n_actions):
                     mdp.P[i, a, (Pu[i].indices)] = np.roll(data,a)
