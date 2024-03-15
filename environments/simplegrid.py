@@ -1,6 +1,6 @@
-
 import numpy as np
 from environments.LMDP import LMDP
+from scipy.sparse import csr_matrix
 
 class SimpleGrid(LMDP):
 
@@ -14,15 +14,25 @@ class SimpleGrid(LMDP):
                 state = x * size + y
                 if state < self.n_nonterminal_states:
                     if x > 0:
-                        self.P0[state][(x - 1) * size + y] = 1
+                        self.P0[state][(x - 1) * size + y] += 1
+                    else:
+                        self.P0[state][state] += 1
                     if x + 1 < size:
-                        self.P0[state][(x + 1) * size + y] = 1
+                        self.P0[state][(x + 1) * size + y] += 1
+                    else:
+                        self.P0[state][state] += 1
                     if y > 0:
-                        self.P0[state][x * size + y - 1] = 1
+                        self.P0[state][x * size + y - 1] += 1
+                    else:
+                        self.P0[state][state] += 1
                     if y + 1 < size:
-                        self.P0[state][x * size + y + 1] = 1
+                        self.P0[state][x * size + y + 1] += 1
+                    else:
+                        self.P0[state][state] += 1
+
                     self.P0[state][:] /= np.sum(self.P0[state])
         
+        #self.P0 = csr_matrix(self.P0)
         # construct reward function
         self.R[0:self.n_nonterminal_states] = -1
         
