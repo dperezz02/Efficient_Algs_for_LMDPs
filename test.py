@@ -72,6 +72,7 @@ if __name__ == "__main__":
     # plot_greedy_policy(greedy_policy, mdp_minigrid, print_policy=True)
     minigrid_mdp_plots.plot_value_function(Q2, print_values=True, file = "value_function_embedded.txt")
     # #plot_path(mdp_minigrid, greedy_policy, path = 'plots\MDP_embedded_value_iteration_path.gif')
+    print(V-Q2.max(axis=1))
  
     # Z-Learning 
     # print("Z-learning training...")
