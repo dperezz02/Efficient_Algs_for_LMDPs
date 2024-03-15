@@ -31,10 +31,6 @@ class SimpleGrid(LMDP):
                         self.P0[state][state] += 1
 
                     self.P0[state][:] /= np.sum(self.P0[state])
-        
-        #self.P0 = csr_matrix(self.P0)
+
         # construct reward function
         self.R[0:self.n_nonterminal_states] = -1
-        
-        print(self.P0)
-        print(self.R)
