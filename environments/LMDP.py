@@ -72,7 +72,8 @@ class LMDP:
         for i in range(mdp.n_states):
             mdp.R[i, :] = self.R[i] 
             if i not in self.T:
-                mdp.R[i, :] = self.R[i] - lmbda * np.sum(Pu[i].data * np.log(Pu[i].data / self.P0[i][Pu[i].indices]))
+                p0 = self.P0[i,Pu[i].indices].toarray()[0] if isspmatrix_csr(self.P0) else self.P0[i,Pu[i].indices]
+                mdp.R[i, :] = self.R[i] - lmbda * np.sum(Pu[i].data * np.log(Pu[i].data / p0))
                 data = Pu[i].data
                 for a in range(mdp.n_actions):
                     mdp.P[i, a, (Pu[i].indices)] = np.roll(data,a)
