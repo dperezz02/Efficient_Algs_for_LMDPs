@@ -9,7 +9,7 @@ class ZLearning:
     """
     Implements Z-learning algorithm
     """
-    def __init__(self, lmdp, lmbda=1, learning_rate=0.25, min_learning_rate=0.0005, learning_rate_decay=0.999, reset_randomness = 0.0):
+    def __init__(self, lmdp, lmbda=1, learning_rate=0.25, min_learning_rate=0.0005, learning_rate_decay=0.99999, reset_randomness = 0.0):
         self.lmdp = lmdp
         self.lmbda = lmbda
         self.learning_rate = learning_rate

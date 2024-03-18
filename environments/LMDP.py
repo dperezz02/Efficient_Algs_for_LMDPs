@@ -62,7 +62,6 @@ class LMDP:
         V = lmbda * np.log(Z)
         return V
   
-    #TODO: Check embeddings. Z LMDP must be equal to Z from V from embedded MDP from LMDP
     def embedding_to_MDP(self, lmbda = 1):
         mdp = MDP(self.n_states, len(self.T), self.n_actions)
         mdp.T = self.T
