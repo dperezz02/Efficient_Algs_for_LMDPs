@@ -9,7 +9,7 @@ class ZLearning:
     """
     Implements Z-learning algorithm
     """
-    def __init__(self, lmdp, lmbda=1, learning_rate=1, min_learning_rate=0.0005, learning_rate_decay=0.99999, reset_randomness = 0.0):
+    def __init__(self, lmdp, lmbda=1, learning_rate=0.25, min_learning_rate=0.0005, learning_rate_decay=0.999, reset_randomness = 0.0):
         self.lmdp = lmdp
         self.lmbda = lmbda
         self.learning_rate = learning_rate
@@ -52,7 +52,7 @@ class ZLearning:
             self.state = np.random.choice(self.n_states) if np.random.rand() < self.reset_randomness else self.lmdp.s0
             self.learning_rate = np.maximum(self.learning_rate * self.learning_rate_decay, self.min_learning_rate)
 
-def Zlearning_training(zlearning: ZLearning, opt_lengths, n_steps = int(5e5)):
+def Zlearning_training(zlearning: ZLearning, n_steps = int(5e5)):
     tt = 0
     l0 = 0
     s0 = 0
@@ -67,8 +67,8 @@ def Zlearning_training(zlearning: ZLearning, opt_lengths, n_steps = int(5e5)):
 
         if zlearning.episode_end:
             z_lengths.append(tt-l0)
-            #z_throughputs[l0:tt] = 1/(tt-l0)
-            z_throughputs[l0:tt] = opt_lengths[s0]/(tt-l0)
+            z_throughputs[l0:tt] = 1/(tt-l0)
+            #z_throughputs[l0:tt] = opt_lengths[s0]/(tt-l0)
             l0 = tt
             s0 = zlearning.state
 
