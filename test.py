@@ -32,17 +32,17 @@ if __name__ == "__main__":
 
     # Q-learning
     # print("Q-learning training...")
-    # qlearning = QLearning(minigrid_mdp, gamma=gamma, learning_rate=1, epsilon_min = 0)
+    #qlearning = QLearning(minigrid_mdp, gamma=gamma, learning_rate=0.25, learning_rate_decay=1, learning_rate_min=0.0005, epsilon=1, epsilon_decay=0.9995, epsilon_min = 0)
     # start_time = time.time()
-    # Q_est, est_policy, lengths, throughputs = Qlearning_training(qlearning, n_steps=int(3e5))
+    #Q_est, est_policy, lengths, throughputs = Qlearning_training(qlearning, n_steps=int(3e5))
     # print("--- %s minutes and %s seconds ---" % (int((time.time() - start_time)/60), int((time.time() - start_time) % 60)))
     # #plot_greedy_policy(est_policy, minigrid_mdp, print_policy=True, estimated=True)
     # minigrid_mdp_plots.plot_value_function(Q_est, print_values=True, file = "QLearning_value_function.txt")
     # #minigrid_mdp_plots.plot_path(est_policy, path = 'plots\MDP_QLearning_path.gif')
-    # print(opt_policy - est_policy)
-    # print("Total Absolute Error: ", np.sum(np.abs(Q-Q_est)))
+    #print(opt_policy - est_policy)
+    #print("Total Absolute Error: ", np.sum(np.abs(Q-Q_est)))
     # plot_episode_length(lengths, minigrid_mdp.shortest_path_length(opt_policy), plot_batch=True)
-    # q_averaged_throughputs = plot_episode_throughput(throughputs, minigrid_mdp.shortest_path_length(opt_policy), plot_batch=True)
+    #q_averaged_throughputs = plot_episode_throughput(throughputs, minigrid_mdp.shortest_path_length(opt_policy), plot_batch=True)
 
     # LMDP
     minigrid = Minigrid(grid_size=grid_size, walls=walls)
@@ -53,13 +53,12 @@ if __name__ == "__main__":
     Z, n_steps = minigrid.power_iteration(lmbda = lmbda, epsilon=epsilon)
     print("Power iteration took: ", n_steps, " steps before converging with epsilon:", epsilon)
     print("\n\n")
-    #minigrid_plots.show_Z(Z, print_Z=True, plot_Z = False, file = "Z_function_power_iteration.txt")
+    minigrid_plots.show_Z(Z, print_Z=True, plot_Z = False, file = "Z_function_power_iteration.txt")
     PU = minigrid.compute_Pu(Z)
-    # with open("PU_power_iteration.txt", "w") as f: # Print the transition matrix from power iteration
-    #     for i in minigrid.S:
-    #         for j in PU[i].indices:
-    #                 if PU[i,j] != 0: f.write("Pu[{}][{}]: {}\n".format(minigrid.states[i], minigrid.states[j], PU[i,j]))
-    # #show_Pu(minigrid, PU, print_Pu=False, plot_Pu = False, is_sparse=True)
+    with open("PU_power_iteration.txt", "w") as f: # Print the transition matrix from power iteration
+        for i in minigrid.S:
+            for j in PU[i].indices:
+                    if PU[i,j] != 0: f.write("Pu[{}][{}]: {}\n".format(minigrid.states[i], minigrid.states[j], PU[i,j]))
     # minigrid_plots.plot_sample_path(PU, path = 'plots\LMDP_power_iteration_path.gif')
     V = minigrid.Z_to_V(Z)
     # with open("value_function_power_iteration.txt", "w") as f: # Print the transition matrix from power iteration
@@ -67,37 +66,72 @@ if __name__ == "__main__":
     #         f.write("V[{}]: {}\n".format(minigrid.states[i], V[i]))
 
     # Z-Learning 
-    # print("Z-learning training...")
-    # zlearning = ZLearning(minigrid, lmbda=1)
-    # start_time = time.time()
-    # Z_est, z_lengths, z_throughputs = Zlearning_training(zlearning, n_steps=int(3e5))
-    # print("--- %s minutes and %s seconds ---" % (int((time.time() - start_time)/60), int((time.time() - start_time) % 60)))
-    # print("Total Absolute Error: ", np.sum(np.abs(PU-zlearning.Pu)))
-    # minigrid_plots.show_Z(Z_est[-1], print_Z=True, plot_Z = False, file = "Z_function_zlearning.txt")
-    # minigrid_plots.plot_sample_path(zlearning.Pu, path = 'plots\LMDP_Z_learning_path.gif')
-    # z_averaged_throughputs = plot_episode_throughput(z_throughputs, minigrid_mdp.shortest_path_length(opt_policy), plot_batch=True)
+    print("Z-learning training...")
+    zlearning = ZLearning(minigrid, lmbda=1)
+    start_time = time.time()
+    Z_est, z_lengths, z_throughputs = Zlearning_training(zlearning, n_steps=int(3e5))
+    print("--- %s minutes and %s seconds ---" % (int((time.time() - start_time)/60), int((time.time() - start_time) % 60)))
+    print("Total Absolute Error: ", np.sum(np.abs(PU-zlearning.Pu)))
+    minigrid_plots.show_Z(Z_est[-1], print_Z=True, plot_Z = False, file = "Z_function_zlearning.txt")
+    #minigrid_plots.plot_sample_path(zlearning.Pu, path = 'plots\LMDP_Z_learning_path.gif')
+    with open("PU_zlearning.txt", "w") as f: # Print the transition matrix from power iteration
+        for i in minigrid.S:
+            for j in zlearning.Pu[i].indices:
+                    if zlearning.Pu[i,j] != 0: f.write("Pu[{}][{}]: {}\n".format(minigrid.states[i], minigrid.states[j], zlearning.Pu[i,j]))
+    z_averaged_throughputs = plot_episode_throughput(z_throughputs, minigrid_mdp.shortest_path_length(opt_policy), plot_batch=True)
 
     # Embedded MDP
-    mdp_minigrid = minigrid.embedding_to_MDP()
-    minigrid_mdp_embedded_plots = Minigrid_MDP_Plots(mdp_minigrid)
-    start_time = time.time()
-    Q2, opt_policy2, n_steps = mdp_minigrid.value_iteration(epsilon, gamma)
-    print("Value iteration took: ", n_steps, " steps before converging with epsilon:", epsilon)
-    print("--- %s minutes and %s seconds ---" % (int((time.time() - start_time)/60), int((time.time() - start_time) % 60)))
-    # plot_greedy_policy(greedy_policy, mdp_minigrid, print_policy=True)
-    #minigrid_mdp_embedded_plots.plot_value_function(Q2, print_values=True, file = "value_function_embedded.txt")
-    #minigrid_mdp_embedded_plots.plot_path(opt_policy2, path = 'plots\MDP_embedded_value_iteration_path.gif')
-    print("Total embedding error: ", np.sum(np.abs(V-Q2.max(axis=1))))
-    #TODO: Check Q Learning for embedded MDP
-    # Q-learning Embedded MDP
-    print("Q-learning training...")
-    qlearning = QLearning(mdp_minigrid, gamma=gamma, learning_rate=0.25, learning_rate_decay=0.9999,epsilon_min = 0)
-    start_time = time.time()
-    Q_est, est_policy, lengths, throughputs = Qlearning_training(qlearning, n_steps=int(3e5))
-    print(qlearning.learning_rate)
-    print("--- %s minutes and %s seconds ---" % (int((time.time() - start_time)/60), int((time.time() - start_time) % 60)))
-    print(opt_policy2 - est_policy)
-    print("Total Absolute Error: ", np.sum(np.abs(Q2-Q_est)))
+    # mdp_minigrid = minigrid.embedding_to_MDP()
+    # minigrid_mdp_embedded_plots = Minigrid_MDP_Plots(mdp_minigrid)
+    # start_time = time.time()
+    # Q2, opt_policy2, n_steps = mdp_minigrid.value_iteration(epsilon, gamma)
+    # print("Value iteration took: ", n_steps, " steps before converging with epsilon:", epsilon)
+    # print("--- %s minutes and %s seconds ---" % (int((time.time() - start_time)/60), int((time.time() - start_time) % 60)))
+    # # plot_greedy_policy(greedy_policy, mdp_minigrid, print_policy=True)
+    # minigrid_mdp_embedded_plots.plot_value_function(Q2, print_values=True, file = "value_function_embedded.txt")
+    # #minigrid_mdp_embedded_plots.plot_path(opt_policy2, path = 'plots\MDP_embedded_value_iteration_path.gif')
+    # print("Total embedding error: ", np.sum(np.abs(V-Q2.max(axis=1))))
+    # #TODO: Check Q Learning for embedded MDP
+    # # Q-learning Embedded MDP
+    # print("Q-learning training...")
+    # qlearning = QLearning(mdp_minigrid, gamma=gamma, learning_rate=0.25, learning_rate_decay=0.9999, epsilon_min = 0)
+    # start_time = time.time()
+    # Q_est, est_policy, lengths, throughputs = Qlearning_training(qlearning, n_steps=int(3e5))
+    # print(qlearning.learning_rate)
+    # print("--- %s minutes and %s seconds ---" % (int((time.time() - start_time)/60), int((time.time() - start_time) % 60)))
+    # print(opt_policy2 - est_policy)
+    # minigrid_mdp_embedded_plots.plot_value_function(Q_est, print_values=True, file = "QLearning_embedded_value_function.txt")
+    # print("Total Absolute Error: ", np.sum(np.abs(Q2-Q_est)))
+    #print(np.abs(Q2-Q_est))
+
+    # learning_rates = [0.25, 0.5, 1]
+    # learning_rate_decays = [0.9999, 0.999, 0.99]
+    # min_learning_rates = [0.0005, 0.005, 0.05]
+    # epsilons = [1, 0.7, 0.5]
+    # epsilon_decays = [0.9999, 0.999]
+    # epsilon_mins = [0.0005, 0.05]
+
+    # min_error = 1e10
+    # best_params = []
+    # good_params = []
+    # for learning_rate in learning_rates:
+    #     print("Learning Rate: ", learning_rate)
+    #     for learning_rate_decay in learning_rate_decays:
+    #         for min_learning_rate in min_learning_rates:
+    #             for epsilon in epsilons:
+    #                 for epsilon_decay in epsilon_decays:
+    #                     for epsilon_min in epsilon_mins:
+    #                         qlearning = QLearning(mdp_minigrid, gamma=gamma, learning_rate=learning_rate, learning_rate_decay=learning_rate_decay, learning_rate_min = min_learning_rate, epsilon=epsilon, epsilon_decay=epsilon_decay, epsilon_min=epsilon_min)
+    #                         Q_est, est_policy, lengths, throughputs = Qlearning_training(qlearning, n_steps=int(3e5))
+    #                         error = np.sum(np.abs(Q2-Q_est))
+    #                         min_error = min(min_error, error)
+    #                         if error == min_error:
+    #                             best_params = [learning_rate, learning_rate_decay, min_learning_rate, epsilon, epsilon_decay, epsilon_min, error]
+    #                         if error <= 100:
+    #                             good_params.append([learning_rate, learning_rate_decay, min_learning_rate, epsilon, epsilon_decay, epsilon_min, error])
+    #                         if error <= 350:
+    #                             print("Learning Rate: ", learning_rate, "Learning Rate Decay: ", learning_rate_decay, "Min Learning Rate: ", min_learning_rate, "Epsilon: ", epsilon, "Epsilon Decay: ", epsilon_decay, "Epsilon Min: ", epsilon_min, "Error: ", error)
+    
     #plot_greedy_policy(est_policy, minigrid_mdp, print_policy=True, estimated=True)
     #minigrid_mdp_embedded_plots.plot_value_function(Q_est, print_values=True, file = "QLearning_embedded_value_function.txt")
     #minigrid_mdp_embedded_plots.plot_path(est_policy, path = 'plots\MDP_QLearning_path.gif')
@@ -111,8 +145,8 @@ if __name__ == "__main__":
     #         for j in zlearning.Pu[i].indices:
     #                 if zlearning.Pu[i,j] != 0: f.write("Pu[{}][{}]: {}\n".format(minigrid.states[i], minigrid.states[j], zlearning.Pu[i,j]))
 
-    # for i in minigrid.S: # Print the transition matrix differences between Z-learning and Power Iteration
-    #        for j in (PU[i].indices):
-    #             if np.abs(PU[i,j] -zlearning.Pu[i,j]) >= 0.05: 
-    #                 print("Pu[", minigrid.states[i], "][", minigrid.states[j], "]: ", PU[i,j])
-    #                 print("ZLearning Pu[", minigrid.states[i], "][", minigrid.states[j], "]: ", zlearning.Pu[i,j])
+    for i in minigrid.S: # Print the transition matrix differences between Z-learning and Power Iteration
+           for j in (PU[i].indices):
+                if np.abs(PU[i,j] -zlearning.Pu[i,j]) >= 0.05: 
+                    print("Pu[", minigrid.states[i], "][", minigrid.states[j], "]: ", PU[i,j])
+                    print("ZLearning Pu[", minigrid.states[i], "][", minigrid.states[j], "]: ", zlearning.Pu[i,j])

@@ -85,8 +85,8 @@ def Qlearning_training(qlearning, n_steps=int(5e5)):
             l0 = tt
             s0 = qlearning.state
 
-        if tt % 10000 == 0:
-            print("Step: ", tt)
+        #if tt % 10000 == 0:
+            #print("Step: ", tt)
     
     if l0 != tt: throughputs[l0:tt] = throughputs[l0-1]
 
