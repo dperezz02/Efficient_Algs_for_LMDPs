@@ -2,6 +2,8 @@ import numpy as np
 import matplotlib.pyplot as plt
 import imageio
 import os
+import seaborn as sns
+import pandas as pd
 
 def state_visited_policy(policy, env):
     state = env.s0
@@ -21,6 +23,24 @@ def state_visited_policy(policy, env):
             break
 
     return states_visited
+
+def plot_throughput(throughputs, grid_size, names, save_path = 'plots\''):
+    df = pd.DataFrame()
+    for i in range(len(names)):
+        temp_df = pd.DataFrame()
+        temp_df['values'] = throughputs[i]
+        temp_df['index'] = np.arange(len(throughputs[i]))
+        temp_df['name'] = names[i]
+        df = pd.concat([df, temp_df])
+    sns.set_context(context="paper", font_scale=1.2)
+    sns.set_style("whitegrid")
+    sns.lineplot(data=df, x='index', y='values', hue='name')
+    plt.xlabel("Time Step")
+    plt.ylabel("Average Reward")
+    plt.title("Average Reward per Time Step in Minigrid " + str(grid_size) + "x"+ str(grid_size))
+    plt.show()
+    plt.savefig(save_path + str(grid_size) + 'throughputs.png')
+
 
 def plot_episode_length(lengths, opt_length, plot_batch=False, batch_size=50):
     print("Number of episodes: ", len(lengths))
@@ -67,15 +87,24 @@ def plot_episode_throughput(throughputs, opt_length, plot_batch=False, batch_siz
     
     return averaged_throughputs
         
-def compare_throughputs(througput1, throughput2, grid_size, name1, name2):
-    plt.plot(range(1, len(througput1)+1), througput1, label= name1)
-    plt.plot(range(1, len(throughput2)+1), throughput2, label= name2)
+def compare_throughputs(throughputs, grid_size, names, save_path = 'plots\''):
+    for i, throughput in enumerate(throughputs):
+        plt.plot(range(1, len(throughput)+1), throughput, label= names[i])
     plt.axhline(y=1/(2*grid_size-1), color='r', linestyle='--', alpha=0.5)
-    plt.xlabel("Time step")
-    plt.ylabel("Averaged Throughput")
-    plt.title("Minigrid " + str(grid_size) + "x"+ str(grid_size) + " " + name1 + " vs " + name2)
+    plt.xlabel("Time Step")
+    plt.ylabel("Average Reward")
+    plt.title("Average Reward per Time Step in Minigrid " + str(grid_size) + "x"+ str(grid_size))
     plt.legend()
+    plt.savefig(save_path + str(grid_size) + 'throughputs.png')
     plt.show()
+
+def plot_value_per_hyperparameter(values, hyperparameters, title, xlabel, ylabel, save_path = 'plots\''):
+    sns.lineplot(x=hyperparameters, y=values)
+    plt.xlabel(xlabel)
+    plt.ylabel(ylabel)
+    plt.title(title)
+    plt.savefig(save_path + title + '.png')
+
 
 def plot_convergence(Opt, Est, model = 'Z-learning'):
     diff = np.abs(Est - Opt).mean(axis=(1))
