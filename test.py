@@ -2,24 +2,25 @@ from environments.MDP import Minigrid_MDP
 from environments.LMDP import Minigrid
 import numpy as np
 import time
-from utils import Minigrid_MDP_Plots, plot_episode_length, plot_episode_throughput, compare_throughputs, plot_throughput, plot_value_per_hyperparameter
-from models.qlearning import QLearning, Qlearning_training
+from utils.plot import Plotter, Minigrid_MDP_Plotter
 from models.zlearning import ZLearning, Zlearning_training
-from lmdp_plots import Minigrid_LMDP_Plots
+from models.qlearning import QLearning, Qlearning_training
+from utils.lmdp_plot import Minigrid_LMDP_Plotter
 from scipy.sparse import csr_matrix
 
-
 if __name__ == "__main__":
+
     grid_size = 15
     walls = [(14,1), (1,8), (5, 5), (12, 5), (8, 7), (2,5), (3,5), (4,5), (6,5), (7,5), (8,5), (9,5), (10,5), (11,5), (13,5), (15,9)]
     # MDP
     minigrid_mdp = Minigrid_MDP(grid_size=grid_size, walls = walls)
-    minigrid_mdp_plots = Minigrid_MDP_Plots(minigrid_mdp)
+    minigrid_mdp_plots = Minigrid_MDP_Plotter(minigrid_mdp)
     # minigrid_mdp.print_attributes()
     #minigrid_mdp.render()
 
     gamma = 1
     epsilon = 1e-10
+    n_iters = int(1e6)
 
     # Value Iteration MDP
     # start_time = time.time()
@@ -51,7 +52,7 @@ if __name__ == "__main__":
 
     # LMDP
     minigrid = Minigrid(grid_size=grid_size, walls=walls)
-    minigrid_plots = Minigrid_LMDP_Plots(minigrid)
+    minigrid_plots = Minigrid_LMDP_Plotter(minigrid)
 
     # Power Iteration LMDP
     lmbda = 1
@@ -60,10 +61,10 @@ if __name__ == "__main__":
     print("\n\n")
     #minigrid_plots.show_Z(Z, print_Z=True, plot_Z = False, file = "Z_function_power_iteration.txt")
     PU = minigrid.compute_Pu(Z)
-    with open("PU_power_iteration.txt", "w") as f: # Print the transition matrix from power iteration
-        for i in minigrid.S:
-            for j in PU[i].indices:
-                    if PU[i,j] != 0: f.write("Pu[{}][{}]: {}\n".format(minigrid.states[i], minigrid.states[j], PU[i,j]))
+    # with open("PU_power_iteration.txt", "w") as f: # Print the transition matrix from power iteration
+    #     for i in minigrid.S:
+    #         for j in PU[i].indices:
+    #                 if PU[i,j] != 0: f.write("Pu[{}][{}]: {}\n".format(minigrid.states[i], minigrid.states[j], PU[i,j]))
     # minigrid_plots.plot_sample_path(PU, path = 'plots\LMDP_power_iteration_path.gif')
     V = minigrid.Z_to_V(Z)
     # with open("value_function_power_iteration.txt", "w") as f: # Print the transition matrix from power iteration
@@ -88,7 +89,7 @@ if __name__ == "__main__":
 
     # Embedded MDP
     mdp_minigrid = minigrid.embedding_to_MDP()
-    minigrid_mdp_embedded_plots = Minigrid_MDP_Plots(mdp_minigrid)
+    minigrid_mdp_embedded_plots = Minigrid_MDP_Plotter(mdp_minigrid)
     start_time = time.time()
     Q2, opt_policy2, n_steps = mdp_minigrid.value_iteration(epsilon, gamma)
     print("Value iteration took: ", n_steps, " steps before converging with epsilon:", epsilon)
@@ -112,35 +113,41 @@ if __name__ == "__main__":
     # #plot_episode_length(lengths, minigrid_mdp.shortest_path_length(opt_policy), plot_batch=True)
     # q_averaged_throughputs2 = plot_episode_throughput(throughputs, minigrid_mdp.shortest_path_length(opt_policy), plot_batch=True)
 
-    epsilons = [1, 0.9]#, 0.8, 0.7, 0.6, 0.5, 0.4, 0.3, 0.2, 0.1]
+    # epsilons = [1, 0.9, 0.8, 0.7, 0.6, 0.5, 0.4, 0.3, 0.2, 0.1]
+    # q_throughputs = []
+    # q_names = []
+    # q_errors = []
+    # q_policy_differences = []
+
+    # for epsilon in epsilons:
+    #     qlearning = QLearning(mdp_minigrid, gamma=gamma, learning_rate=0.25, learning_rate_decay=0.99999, learning_rate_min=0.0005, epsilon=epsilon, epsilon_decay=0.9995, epsilon_min = 0)
+    #     Q_est, est_policy, _, throughputs = Qlearning_training(qlearning, n_steps=n_iters)
+    #     q_throughputs.append(throughputs)
+    #     q_names.append('Epsilon: ' + str(epsilon))
+    #     q_errors.append(np.sum(np.abs(Q2-Q_est))/np.sum(np.abs(Q2)))
+    #     q_policy_differences.append(np.sum(opt_policy2 != est_policy))
+
+
+    # minigrid_mdp_embedded_plots.plot_throughput(q_throughputs, minigrid.grid_size, names = q_names, save_path='plots\Q_epsilon')
+    # minigrid_mdp_embedded_plots.plot_value_per_hyperparameter(q_errors, epsilons, title = 'Value Function Approximation Error by Exploration', xlabel = 'Epsilon', ylabel = 'Approximation Error', save_path = 'plots\Q_epsilon_error')
+    # minigrid_mdp_embedded_plots.plot_value_per_hyperparameter(q_policy_differences, epsilons, title = 'Policy Differences by Exploration', xlabel = 'Epsilon', ylabel = 'Policy Differences', save_path = 'plots\Q_epsilon_policy_difference')
+
+
+    epsilon_decays = [0.9999, 0.99975]#, 0.9995, 0.99925, 0.999, 0.995, 0.99, 0.95, 0.9, 0.5]
     q_throughputs = []
     q_names = []
     q_errors = []
     q_policy_differences = []
 
-    for epsilon in epsilons:
-        qlearning = QLearning(mdp_minigrid, gamma=gamma, learning_rate=0.25, learning_rate_decay=0.99999, learning_rate_min=0.0005, epsilon=epsilon, epsilon_decay=0.9995, epsilon_min = 0)
-        Q_est, est_policy, _, throughputs = Qlearning_training(qlearning, n_steps=int(8e5))
-        q_averaged_throughputs = plot_episode_throughput(throughputs, minigrid_mdp.shortest_path_length(opt_policy), plot_batch=True)
-        q_throughputs.append(q_averaged_throughputs)
-        q_names.append('Epsilon: ' + str(epsilon))
+    for epsilon_decay in epsilon_decays:
+        qlearning = QLearning(mdp_minigrid, gamma=gamma, learning_rate=0.25, learning_rate_decay=0.99999, learning_rate_min=0.0005, epsilon=1, epsilon_decay=epsilon_decay, epsilon_min = 0)
+        Q_est, est_policy, _, throughputs = Qlearning_training(qlearning, n_steps=n_iters)
+        q_throughputs.append(throughputs)
+        q_names.append('Epsilon Decay: ' + str(epsilon))
         q_errors.append(np.sum(np.abs(Q2-Q_est))/np.sum(np.abs(Q2)))
         q_policy_differences.append(np.sum(opt_policy2 != est_policy))
 
 
-    #compare_throughputs(q_averaged_throughputs, q_averaged_throughputs2, minigrid.grid_size, name1 = 'Q Learning', name2 = 'Q Learning Embedded')
-    plot_throughput(q_throughputs, minigrid.grid_size, names = q_names, save_path='plots\Q_epsilon')
-    #compare_throughputs(throughputs = q_throughputs, grid_size = minigrid.grid_size, names = q_names, save_path='plots\Q_epsilon_old')
-    #plot_value_per_hyperparameter(q_errors, epsilons, title = 'Value Function Approximation Error by Exploration', xlabel = 'Epsilon', ylabel = 'Approximation Error', save_path = 'plots\Q_epsilon_error')
-    #plot_value_per_hyperparameter(q_policy_differences, epsilons, title = 'Policy Differences by Exploration', xlabel = 'Epsilon', ylabel = 'Policy Differences', save_path = 'plots\Q_epsilon_policy_difference')
-
-    # with open("PU_zlearning", "w") as f: # Print the transition matrix from Z-learning
-    #     for i in minigrid.S:
-    #         for j in zlearning.Pu[i].indices:
-    #                 if zlearning.Pu[i,j] != 0: f.write("Pu[{}][{}]: {}\n".format(minigrid.states[i], minigrid.states[j], zlearning.Pu[i,j]))
-
-    # for i in minigrid.S: # Print the transition matrix differences between Z-learning and Power Iteration
-    #        for j in (PU[i].indices):
-    #             if np.abs(PU[i,j] -zlearning.Pu[i,j]) >= 0.05: 
-    #                 print("Pu[", minigrid.states[i], "][", minigrid.states[j], "]: ", PU[i,j])
-    #                 print("ZLearning Pu[", minigrid.states[i], "][", minigrid.states[j], "]: ", zlearning.Pu[i,j])
+    minigrid_mdp_embedded_plots.plot_throughput(q_throughputs, minigrid.grid_size, names = q_names, save_path='plots\Q_epsilon_decay')
+    minigrid_mdp_embedded_plots.plot_value_per_hyperparameter(q_errors, epsilon_decays, title = 'Value Function Approximation Error by Exploration Decay', xlabel = 'Epsilon Decay', ylabel = 'Approximation Error', save_path = 'plots\Q_epsilon_decay_error')
+    minigrid_mdp_embedded_plots.plot_value_per_hyperparameter(q_policy_differences, epsilon_decays, title = 'Policy Differences by Exploration Decay', xlabel = 'Epsilon Decay', ylabel = 'Policy Differences', save_path = 'plots\Q_epsilon_decay_policy_difference')

@@ -2,9 +2,11 @@ import numpy as np
 import matplotlib.pyplot as plt
 import imageio
 import os
+from utils.plot import Plotter
 
-class Minigrid_LMDP_Plots():
+class Minigrid_LMDP_Plotter(Plotter):
     def __init__(self, lmdp):
+        super().__init__()
         self.lmdp = lmdp
     
     def show_Z(self, Z, print_Z=False, plot_Z=True, file = "Z_value.txt"):

@@ -4,119 +4,112 @@ import imageio
 import os
 import seaborn as sns
 import pandas as pd
+import matplotlib as mpl
+import pandas as pd
 
-def state_visited_policy(policy, env):
-    state = env.s0
-    states_visited = np.zeros((env.n_states))
-    states_visited[state] = 1
-    n_steps = 0
-    while True:
-        n_steps += 1
-        next_state, _, done = env.act(state, policy[state])
-        states_visited[next_state] = 1
-        if done:
-            break
-        else:
-            state = next_state
-
-        if n_steps > 100:
-            break
-
-    return states_visited
-
-def plot_throughput(throughputs, grid_size, names, save_path = 'plots\''):
-    df = pd.DataFrame()
-    for i in range(len(names)):
-        temp_df = pd.DataFrame()
-        temp_df['values'] = throughputs[i]
-        temp_df['index'] = np.arange(len(throughputs[i]))
-        temp_df['name'] = names[i]
-        df = pd.concat([df, temp_df])
-    sns.set_context(context="paper", font_scale=1.2)
-    sns.set_style("whitegrid")
-    sns.lineplot(data=df, x='index', y='values', hue='name')
-    plt.xlabel("Time Step")
-    plt.ylabel("Average Reward")
-    plt.title("Average Reward per Time Step in Minigrid " + str(grid_size) + "x"+ str(grid_size))
-    plt.show()
-    plt.savefig(save_path + str(grid_size) + 'throughputs.png')
-
-
-def plot_episode_length(lengths, opt_length, plot_batch=False, batch_size=50):
-    print("Number of episodes: ", len(lengths))
-    plt.plot(range(1, len(lengths)+1), lengths)
-    plt.axhline(y=opt_length, color='r', linestyle='--', alpha=0.5)
-    plt.xlabel("Episode")
-    plt.ylabel("Episode Length")
-    plt.title("Episode Length vs. Episode")
-    plt.show()
-    print("Last episode length: ",lengths[-1])
-    if plot_batch:
-        averaged_lengths = [sum(lengths[i:i+batch_size]) / batch_size for i in range(0, len(lengths)-len(lengths)%batch_size, batch_size)]
-        averaged_lengths.append(np.mean(lengths[-(len(lengths) % batch_size):]))
-        plt.plot(range(1, len(averaged_lengths)+1), averaged_lengths)
-        plt.axhline(y=opt_length, color='r', linestyle='--', alpha=0.5)
-        plt.xlabel("Batch of Episodes")
-        plt.ylabel("Average Episode Length")
-        plt.title("Episodes Batch Length vs. Batch of Episodes")
-        plt.show()
-        print("Last batch averaged length: ", averaged_lengths[-1])
-
-def plot_episode_throughput(throughputs, opt_length, plot_batch=False, batch_size=1000):
-    plt.plot(range(1, len(throughputs)+1), throughputs)
-    plt.axhline(y=1/opt_length, color='r', linestyle='--', alpha=0.5)
-    plt.xlabel("Time step")
-    plt.ylabel("Throughput")
-    plt.title("Throughput vs. Time step")
-    plt.show()
-    print("Last time step throughput: ",throughputs[-1])
-    averaged_throughputs = throughputs
-
-    if plot_batch:
-        n_steps = len(throughputs)
-        averaged_throughputs = np.zeros(n_steps)
-        for b in range(0, n_steps, batch_size):
-            averaged_throughputs[b:b+batch_size] = np.mean(throughputs[b:b+batch_size])
-        plt.plot(range(1, len(averaged_throughputs)+1), averaged_throughputs)
-        plt.axhline(y=1/opt_length, color='r', linestyle='--', alpha=0.5)
-        plt.xlabel("Time step")
-        plt.ylabel("Batch Averaged Throughput")
-        plt.title("Batch Averaged Throughput vs. Time step")
-        plt.show()
-        print("Last batch averaged througput: ", averaged_throughputs[-1])
-    
-    return averaged_throughputs
+class Plotter:
+    def __init__(self):
+        try:
+            # Try to enable TeX rendering
+            plt.rcParams["text.usetex"] = True
+        except FileNotFoundError as e:
+            # If a FileNotFoundError occurs (related to TeX), disable TeX rendering
+            print("Warning: TeX rendering unavailable. Using Matplotlib's default fonts.")
+            plt.rcParams["text.usetex"] = False
         
-def compare_throughputs(throughputs, grid_size, names, save_path = 'plots\''):
-    for i, throughput in enumerate(throughputs):
-        plt.plot(range(1, len(throughput)+1), throughput, label= names[i])
-    plt.axhline(y=1/(2*grid_size-1), color='r', linestyle='--', alpha=0.5)
-    plt.xlabel("Time Step")
-    plt.ylabel("Average Reward")
-    plt.title("Average Reward per Time Step in Minigrid " + str(grid_size) + "x"+ str(grid_size))
-    plt.legend()
-    plt.savefig(save_path + str(grid_size) + 'throughputs.png')
-    plt.show()
+        sns.set_context(context="paper", font_scale=1.2)
+        sns.set_style({'font.family': 'serif'})
 
-def plot_value_per_hyperparameter(values, hyperparameters, title, xlabel, ylabel, save_path = 'plots\''):
-    sns.lineplot(x=hyperparameters, y=values)
-    plt.xlabel(xlabel)
-    plt.ylabel(ylabel)
-    plt.title(title)
-    plt.savefig(save_path + title + '.png')
+    def plot_throughput(self, throughputs, grid_size, names, smooth_window = 10000, save_path = 'plots\''):
+        df = pd.DataFrame()
+        for i in range(len(names)):
+            temp_df = pd.DataFrame()
+            temp_df['rewards'] = throughputs[i]
+            temp_df['smoothed_rewards'] = temp_df['rewards'] .rolling(window=smooth_window, center=True).mean()
+            temp_df['rewards'] = temp_df['rewards'] .rolling(window=int(smooth_window/5), center=True).mean()
+            temp_df['index'] = range(len(throughputs[i]))
+            temp_df['name'] = names[i]
+            df = pd.concat([df, temp_df.reset_index(drop=True)], ignore_index=True)
+        
+        ax = sns.lineplot(data=df, x='index', y='rewards', hue='name', alpha=0.5, legend=False)
+        print("1")
+        ax = sns.lineplot(data=df, x='index', y='smoothed_rewards', hue='name', alpha=1.0)
+        print("2")
+        ax.ticklabel_format(style="sci", scilimits=(0, 0), axis="x")
+        ax.set(xlabel="Time Step", ylabel="Average Reward")
+        plt.legend(bbox_to_anchor=(1.05, 1), loc='upper left')
+        plt.title("Episodic Throughput in Minigrid " + str(grid_size) + "x"+ str(grid_size))
+        plt.tight_layout()
+        plt.savefig(save_path + str(grid_size) + 'throughputs.png')
+        plt.show()
+        plt.clf()
 
 
-def plot_convergence(Opt, Est, model = 'Z-learning'):
-    diff = np.abs(Est - Opt).mean(axis=(1))
-    plt.plot(diff)
-    plt.xlabel('iteration')
-    plt.ylabel('Error')
-    plt.title(model + " convergence")
-    plt.show()
+    def plot_episode_length(self, lengths, opt_length, plot_batch=False, batch_size=50):
+        print("Number of episodes: ", len(lengths))
+        plt.plot(range(1, len(lengths)+1), lengths)
+        plt.axhline(y=opt_length, color='r', linestyle='--', alpha=0.5)
+        plt.xlabel("Episode")
+        plt.ylabel("Episode Length")
+        plt.title("Episode Length vs. Episode")
+        plt.show()
+        print("Last episode length: ",lengths[-1])
+        if plot_batch:
+            averaged_lengths = [sum(lengths[i:i+batch_size]) / batch_size for i in range(0, len(lengths)-len(lengths)%batch_size, batch_size)]
+            averaged_lengths.append(np.mean(lengths[-(len(lengths) % batch_size):]))
+            plt.plot(range(1, len(averaged_lengths)+1), averaged_lengths)
+            plt.axhline(y=opt_length, color='r', linestyle='--', alpha=0.5)
+            plt.xlabel("Batch of Episodes")
+            plt.ylabel("Average Episode Length")
+            plt.title("Episodes Batch Length vs. Batch of Episodes")
+            plt.show()
+            print("Last batch averaged length: ", averaged_lengths[-1])
 
-class Minigrid_MDP_Plots:
+    def plot_episode_throughput(self, throughputs, opt_length, smooth_window=5000):
+        plt.plot(range(1, len(throughputs)+1), throughputs, alpha=0.09, color='b')
+        plt.axhline(y=1/opt_length, color='r', linestyle='--', alpha=0.5)
+        throughputs_series = pd.Series(throughputs)
+        smoothed_throughputs = throughputs_series.rolling(window=smooth_window, center=True).mean()
+        plt.plot(range(1, len(smoothed_throughputs)+1), smoothed_throughputs, color='b')
+        plt.xlabel("Time step")
+        plt.ylabel("Averaged Throughput")
+        plt.title("Averaged Throughput vs. Time step")
+        plt.show()
+        #print("Last batch averaged througput: ", smoothed_throughputs[-1])
+    
+        return smoothed_throughputs
+            
+    def compare_throughputs(self, throughputs, grid_size, names, save_path = 'plots\''):
+        for i, throughput in enumerate(throughputs):
+            plt.plot(range(1, len(throughput)+1), throughput, label= names[i])
+        plt.axhline(y=1/(2*grid_size-1), color='r', linestyle='--', alpha=0.5)
+        plt.xlabel("Time Step")
+        plt.ylabel("Average Reward")
+        plt.title("Average Reward per Time Step in Minigrid " + str(grid_size) + "x"+ str(grid_size))
+        plt.legend()
+        plt.savefig(save_path + str(grid_size) + 'throughputs.png')
+        plt.show()
+
+    def plot_value_per_hyperparameter(self, values, hyperparameters, title, xlabel, ylabel, save_path = 'plots\''):
+        sns.lineplot(x=hyperparameters, y=values)
+        plt.xlabel(xlabel)
+        plt.ylabel(ylabel)
+        plt.title(title)
+        plt.savefig(save_path + title + '.png')
+        plt.show()
+
+    def plot_convergence(self, Opt, Est, model = 'Z-learning'):
+        diff = np.abs(Est - Opt).mean(axis=(1))
+        plt.plot(diff)
+        plt.xlabel('iteration')
+        plt.ylabel('Error')
+        plt.title(model + " convergence")
+        plt.show()
+
+class Minigrid_MDP_Plotter(Plotter):
 
     def __init__(self, minigrid):
+        super().__init__()
         self.minigrid = minigrid
 
     def minigrid_demo(self):
@@ -138,9 +131,28 @@ class Minigrid_MDP_Plots:
                 print("Invalid action.")
             a = input(f"       Select an Action from {self.minigrid.actions} (default {action}, press 'e' to exit): ")
 
+    def state_visited_policy(self, policy):
+        state = self.minigrid.s0
+        states_visited = np.zeros((self.minigrid.n_states))
+        states_visited[state] = 1
+        n_steps = 0
+        while True:
+            n_steps += 1
+            next_state, _, done = self.minigrid.act(state, policy[state])
+            states_visited[next_state] = 1
+            if done:
+                break
+            else:
+                state = next_state
+
+            if n_steps > 100:
+                break
+
+        return states_visited
+
     def plot_greedy_policy(self, greedy_policy, estimated=False, print_policy=False):
         if print_policy: print(greedy_policy)
-        states_visited = state_visited_policy(greedy_policy, self.minigrid)
+        states_visited = self.state_visited_policy(greedy_policy)
         plt.figure(figsize=(5, 2*self.minigrid.grid_size))
         plt.imshow(states_visited.reshape((self.minigrid.n_cells,4)), cmap="Greys")
         if estimated: plt.title("Estimated policy \n ( The states in black represent the states selected by the estimated policy)")
@@ -186,7 +198,7 @@ class Minigrid_MDP_Plots:
         os.startfile(path)  # for windows
 
     def plot_greedy_policy_square(self, greedy_policy):
-        states_visited = state_visited_policy(greedy_policy, self.minigrid)
+        states_visited = self.state_visited_policy(greedy_policy)
         _, axs = plt.subplots(self.minigrid.grid_size, self.minigrid.grid_size, figsize=(30, 80))
 
         # Calculate the number of orientations per cell
