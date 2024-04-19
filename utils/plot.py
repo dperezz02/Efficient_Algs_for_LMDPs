@@ -25,20 +25,18 @@ class Plotter:
         for i in range(len(names)):
             temp_df = pd.DataFrame()
             temp_df['rewards'] = throughputs[i]
-            temp_df['smoothed_rewards'] = temp_df['rewards'] .rolling(window=smooth_window, center=True).mean()
-            temp_df['rewards'] = temp_df['rewards'] .rolling(window=int(smooth_window/5), center=True).mean()
+            temp_df['smoothed_rewards'] = temp_df['rewards'].rolling(window=smooth_window, min_periods=1, center=True).mean()
+            temp_df['rewards'] = temp_df['rewards'] .rolling(window=int(smooth_window/5), min_periods=1, center=True).mean()
             temp_df['index'] = range(len(throughputs[i]))
             temp_df['name'] = names[i]
             df = pd.concat([df, temp_df.reset_index(drop=True)], ignore_index=True)
         
         ax = sns.lineplot(data=df, x='index', y='rewards', hue='name', alpha=0.5, legend=False)
-        print("1")
         ax = sns.lineplot(data=df, x='index', y='smoothed_rewards', hue='name', alpha=1.0)
-        print("2")
         ax.ticklabel_format(style="sci", scilimits=(0, 0), axis="x")
-        ax.set(xlabel="Time Step", ylabel="Average Reward")
+        ax.set(xlabel="Time Step", ylabel="Episodic Reward")
         plt.legend(bbox_to_anchor=(1.05, 1), loc='upper left')
-        plt.title("Episodic Throughput in Minigrid " + str(grid_size) + "x"+ str(grid_size))
+        plt.title("Episodic Throughput in Minigrid " + str(grid_size) + "x"+ str(grid_size) + "Walls")
         plt.tight_layout()
         plt.savefig(save_path + str(grid_size) + 'throughputs.png')
         plt.show()
@@ -97,6 +95,7 @@ class Plotter:
         plt.title(title)
         plt.savefig(save_path + title + '.png')
         plt.show()
+        plt.clf()
 
     def plot_convergence(self, Opt, Est, model = 'Z-learning'):
         diff = np.abs(Est - Opt).mean(axis=(1))
