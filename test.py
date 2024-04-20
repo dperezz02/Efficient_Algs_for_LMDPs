@@ -10,26 +10,25 @@ from scipy.sparse import csr_matrix
 
 if __name__ == "__main__":
 
-    grid_size = 15
-    walls = [(14,1), (1,8), (5, 5), (12, 5), (8, 7), (2,5), (3,5), (4,5), (6,5), (7,5), (8,5), (9,5), (10,5), (11,5), (13,5), (15,9)]
+    grid_size = 3
+    walls = []#(14,1), (1,8), (5, 5), (12, 5), (8, 7), (2,5), (3,5), (4,5), (6,5), (7,5), (8,5), (9,5), (10,5), (11,5), (13,5), (15,9)]
+    
     # MDP
     minigrid_mdp = Minigrid_MDP(grid_size=grid_size, walls = walls)
     minigrid_mdp_plots = Minigrid_MDP_Plotter(minigrid_mdp)
-    # minigrid_mdp.print_attributes()
-    #minigrid_mdp.render()
 
     gamma = 1
     epsilon = 1e-10
     n_iters = int(1e6)
 
     # Value Iteration MDP
-    # start_time = time.time()
+    start_time = time.time()
     Q, opt_policy, n_steps = minigrid_mdp.value_iteration(epsilon, gamma)
-    # print("Value iteration took: ", n_steps, " steps before converging with epsilon:", epsilon)
-    # print("--- %s minutes and %s seconds ---" % (int((time.time() - start_time)/60), int((time.time() - start_time) % 60)))
+    print("Value iteration took: ", n_steps, " steps before converging with epsilon:", epsilon)
+    print("--- %s minutes and %s seconds ---" % (int((time.time() - start_time)/60), int((time.time() - start_time) % 60)))
     # opt_lengths = list(minigrid_mdp.shortest_path_length(opt_policy, s) for s in range(minigrid_mdp.n_states))
     # # plot_greedy_policy(opt_policy, minigrid_mdp, print_policy=True)
-    #minigrid_mdp_plots.plot_value_function(Q, print_values=True, file = "value_function.txt")
+    minigrid_mdp_plots.plot_value_function(Q, print_values=True, file = "value_function.txt")
     #minigrid_mdp_plots.plot_path(opt_policy, path = 'plots\MDP_value_iteration_path.gif')
 
     # Q-learning
@@ -51,22 +50,22 @@ if __name__ == "__main__":
     # q_averaged_throughputs = plot_episode_throughput(throughputs, minigrid_mdp.shortest_path_length(opt_policy), plot_batch=True)
 
     # LMDP
-    minigrid = Minigrid(grid_size=grid_size, walls=walls)
-    minigrid_plots = Minigrid_LMDP_Plotter(minigrid)
+    # minigrid = Minigrid(grid_size=grid_size, walls=walls)
+    # minigrid_plots = Minigrid_LMDP_Plotter(minigrid)
 
     # Power Iteration LMDP
-    lmbda = 1
-    Z, n_steps = minigrid.power_iteration(lmbda = lmbda, epsilon=epsilon)
-    print("Power iteration took: ", n_steps, " steps before converging with epsilon:", epsilon)
-    print("\n\n")
+    # lmbda = 1
+    # Z, n_steps = minigrid.power_iteration(lmbda = lmbda, epsilon=epsilon)
+    # print("Power iteration took: ", n_steps, " steps before converging with epsilon:", epsilon)
+    # print("\n\n")
     #minigrid_plots.show_Z(Z, print_Z=True, plot_Z = False, file = "Z_function_power_iteration.txt")
-    PU = minigrid.compute_Pu(Z)
+    # PU = minigrid.compute_Pu(Z)
     # with open("PU_power_iteration.txt", "w") as f: # Print the transition matrix from power iteration
     #     for i in minigrid.S:
     #         for j in PU[i].indices:
     #                 if PU[i,j] != 0: f.write("Pu[{}][{}]: {}\n".format(minigrid.states[i], minigrid.states[j], PU[i,j]))
     # minigrid_plots.plot_sample_path(PU, path = 'plots\LMDP_power_iteration_path.gif')
-    V = minigrid.Z_to_V(Z)
+    # V = minigrid.Z_to_V(Z)
     # with open("value_function_power_iteration.txt", "w") as f: # Print the transition matrix from power iteration
     #     for i in range(minigrid.n_states):
     #         f.write("V[{}]: {}\n".format(minigrid.states[i], V[i]))
@@ -88,16 +87,16 @@ if __name__ == "__main__":
     # z_averaged_throughputs = plot_episode_throughput(z_throughputs, minigrid_mdp.shortest_path_length(opt_policy), plot_batch=True)
 
     # Embedded MDP
-    mdp_minigrid = minigrid.embedding_to_MDP()
-    minigrid_mdp_embedded_plots = Minigrid_MDP_Plotter(mdp_minigrid)
-    start_time = time.time()
-    Q2, opt_policy2, n_steps = mdp_minigrid.value_iteration(epsilon, gamma)
-    print("Value iteration took: ", n_steps, " steps before converging with epsilon:", epsilon)
-    print("--- %s minutes and %s seconds ---" % (int((time.time() - start_time)/60), int((time.time() - start_time) % 60)))
-    # # plot_greedy_policy(greedy_policy, mdp_minigrid, print_policy=True)
-    #minigrid_mdp_embedded_plots.plot_value_function(Q2, print_values=True, file = "value_function_embedded.txt")
-    # #minigrid_mdp_embedded_plots.plot_path(opt_policy2, path = 'plots\MDP_embedded_value_iteration_path.gif')
-    print("Total embedding error: ", np.sum(np.abs(V-Q2.max(axis=1))))
+    # mdp_minigrid = minigrid.embedding_to_MDP()
+    # minigrid_mdp_embedded_plots = Minigrid_MDP_Plotter(mdp_minigrid)
+    # start_time = time.time()
+    # Q2, opt_policy2, n_steps = mdp_minigrid.value_iteration(epsilon, gamma)
+    # print("Value iteration took: ", n_steps, " steps before converging with epsilon:", epsilon)
+    # print("--- %s minutes and %s seconds ---" % (int((time.time() - start_time)/60), int((time.time() - start_time) % 60)))
+    # # # plot_greedy_policy(greedy_policy, mdp_minigrid, print_policy=True)
+    # #minigrid_mdp_embedded_plots.plot_value_function(Q2, print_values=True, file = "value_function_embedded.txt")
+    # # #minigrid_mdp_embedded_plots.plot_path(opt_policy2, path = 'plots\MDP_embedded_value_iteration_path.gif')
+    # print("Total embedding error: ", np.sum(np.abs(V-Q2.max(axis=1))))
 
     # Q-learning Embedded MDP
     # print("Q-learning training...")

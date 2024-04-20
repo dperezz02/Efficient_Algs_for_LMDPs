@@ -86,25 +86,29 @@ if __name__ == "__main__":
 
 
     #learning_rate_decays = [1, 0.9999, 0.995, 0.99]
-    learning_rates = [1, 0.75, 0.5, 0.25, 0.1, 0.05, 0.01]
+    #learning_rates = [1, 0.75, 0.5, 0.25, 0.1, 0.05, 0.01]
+    #gammas = [1, 0.99, 0.95, 0.9, 0]
+    lambdas = [1, 0.1, 0.01, 0.001]
     q_throughputs = []
     q_names = []
     q_errors = []
     q_policies = []
     
-    for learning_rate in learning_rates:
-        qlearning = QLearning(mdp_minigrid, gamma=gamma, learning_rate=learning_rate, learning_rate_decay=0.9999, learning_rate_min=0.0005, epsilon=1, epsilon_decay=0.9995, epsilon_min = 0)
-        #zlearning = ZLearning(minigrid, lmbda=1, learning_rate=0.25, learning_rate_decay=0.99999, learning_rate_min=0.0005)
-        Q_est, est_policy, _, throughputs = Qlearning_training(qlearning, n_steps=n_iters)
-        #_, _, z_throughputs = Zlearning_training(zlearning, n_steps=n_iters)
-        #Pu = zlearning.Pu
-        #q_throughputs.append(z_throughputs)
-        q_names.append('Learning Rate: ' + str(learning_rate))
-        q_errors.append(np.sum(np.abs(Q2-Q_est))/np.sum(np.abs(Q2)))
-        q_policies.append(1-np.sum(opt_policy2 != est_policy)/mdp_minigrid.n_states)
-        #q_policies.append(1-np.sum(np.abs(PU-zlearning.Pu))/np.sum(PU))
+    for lmbda in lambdas:
+        #qlearning = QLearning(mdp_minigrid, gamma=gamma, learning_rate=0.25, learning_rate_decay=0.9999, learning_rate_min=0.0005, epsilon=1, epsilon_decay=0.9995, epsilon_min = 0)
+        zlearning = ZLearning(minigrid, lmbda=lmbda, learning_rate=0.25, learning_rate_decay=0.9999, learning_rate_min=0.0005)
+        #Q_est, est_policy, _, throughputs = Qlearning_training(qlearning, n_steps=n_iters)
+        _, _, z_throughputs = Zlearning_training(zlearning, n_steps=n_iters)
+        Pu = zlearning.Pu
+        q_throughputs.append(z_throughputs)
+        q_names.append('Lambda: ' + str(lmbda))
+        #q_errors.append(np.sum(np.abs(Q2-Q_est))/np.sum(np.abs(Q2)))
+        #q_policies.append(1-np.sum(opt_policy2 != est_policy)/mdp_minigrid.n_states)
+        q_policies.append(1-np.sum(np.abs(PU-zlearning.Pu))/np.sum(PU))
 
 
-    minigrid_mdp_embedded_plots.plot_throughput(q_throughputs, minigrid.grid_size, names = q_names, save_path='plots\Q_learning_rate')
-    minigrid_mdp_embedded_plots.plot_value_per_hyperparameter(q_errors, learning_rates, title = 'Value Function Approximation Error by Learning Rate', xlabel = 'Learning Rate', ylabel = 'Approximation Error', save_path = 'plots\Q_learning_rate_error')
-    minigrid_mdp_embedded_plots.plot_value_per_hyperparameter(q_policies, learning_rates, title = 'Optimal Policy Approximation by Learning Rate', xlabel = 'Learning Rate', ylabel = 'Optimal Policy Approximation', save_path = 'plots\Q_learning_rate_policy')
+    minigrid_mdp_embedded_plots.plot_throughput(q_throughputs, minigrid.grid_size, names = q_names, save_path='plots\Z_lmbda')
+    #minigrid_mdp_embedded_plots.plot_value_per_hyperparameter(q_errors, gammas, title = 'Value Function Approximation Error by Discount Rate', xlabel = 'Discount Rate', ylabel = 'Approximation Error', save_path = 'plots\Q_discount_rate_error')
+    minigrid_mdp_embedded_plots.plot_value_per_hyperparameter(q_policies, lambdas, title = 'PU Approximation by Temperature Parameter', xlabel = 'Lambda', ylabel = 'PU Approximation', save_path = 'plots\Z_lambda_pu')
+
+    #TODO: gamma lambda
