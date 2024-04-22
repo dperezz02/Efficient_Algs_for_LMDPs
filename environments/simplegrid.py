@@ -1,6 +1,5 @@
 import numpy as np
 from environments.LMDP import LMDP
-from scipy.sparse import csr_matrix
 
 class SimpleGrid(LMDP):
 

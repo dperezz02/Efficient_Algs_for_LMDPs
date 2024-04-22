@@ -92,19 +92,29 @@ class Minigrid(LMDP):
         np.array((0, -1)),
     ]
 
-    def __init__(self, grid_size = 14, walls = []):
+    def __init__(self, grid_size = 14, walls = [], env = None, P0 = None, R = None):
         self.grid_size = grid_size
         self.n_orientations = 4
         super().__init__(n_states = self.n_orientations*(grid_size*grid_size - len(walls)), n_terminal_states = self.n_orientations, n_actions = 3)
         self.actions = list(range(self.n_actions))
-        self._create_environment(grid_size, walls)
+        self._create_environment(grid_size, walls, env)
         self.n_cells = int(self.n_states / self.n_orientations)
-        #TODO: Finish adaptations from MDP. Compare Z Learning - Q Learning convergence. Check embbedding value functions.
-        self.create_P0()
-        self.reward_function()
 
-    def _create_environment(self, grid_size, walls):
-        self.env = OrderEnforcing(CustomEnv(size=grid_size+2, walls=walls, render_mode="rgb_array"))
+        if P0 is None:
+            self._create_P0()
+        else:
+            self.P0 = P0
+
+        if R is None: 
+            self._reward_function()
+        else: 
+            self.R = R
+
+    def _create_environment(self, grid_size, walls, env):
+        if env is None:
+            self.env = OrderEnforcing(CustomEnv(size=grid_size+2, walls=walls, render_mode="rgb_array"))
+        else:
+            self.env = env
         self.env.reset()
 
         self.states = [
@@ -120,7 +130,7 @@ class Minigrid(LMDP):
             self.state_to_index[s] for s in self.states if not self.terminal(self.state_to_index[s])
         ]
 
-    def create_P0(self, sparse = True):
+    def _create_P0(self, sparse = True):
         for state in self.S: #range(self.n_states): 
             for action in self.actions:
                 next_state = self.state_step(self.states[state], action)
@@ -128,7 +138,7 @@ class Minigrid(LMDP):
         if sparse:
             self.P0 = csr_matrix(self.P0)
 
-    def reward_function(self):
+    def _reward_function(self):
         for state in self.S:
             #pos = self.env.grid.get(state[0], state[1])
             #at_goal = pos is not None and pos.type == "goal"

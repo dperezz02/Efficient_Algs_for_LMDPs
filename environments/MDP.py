@@ -48,6 +48,40 @@ class MDP:
             n_steps += 1
         return n_steps
     
+    def embedding_to_LMDP(self):
+        from environments.LMDP import LMDP
+        lmdp = LMDP(self.n_states, len(self.T), self.n_actions)
+        lmdp.T = self.T
+
+        for state in range(self.n_nonterminal_states): 
+            baj = self.P[state]
+            epsilon = 1e-8
+            # Find columns that contain any non-zero values
+            cols_with_nonzero = np.any(baj != 0, axis=0)
+            # Substitute 0s in those columns with 'epsilon'
+            baj[:, cols_with_nonzero] = np.where(baj[:, cols_with_nonzero] == 0, epsilon, baj[:, cols_with_nonzero])
+            # Renormalize rows to sum to one
+            baj /= baj.sum(axis=1)[:, np.newaxis]
+            # Remove the zero columns
+            baj = baj[:, cols_with_nonzero]
+
+            la = -self.R[state]
+            hia = np.sum(baj*np.log(baj), axis=1)
+            y = la - hia
+
+            baj_pinv = np.linalg.pinv(baj)
+            x_hat = -np.dot(baj_pinv, y)
+
+            q = -np.log(np.sum(np.exp(x_hat)))
+            x = x_hat + q
+
+            lmdp.R[state] = -np.exp(q)
+            # Atribute the values in 'x' to the correct columns in 'baj'
+            lmdp.P0[state, np.flatnonzero(cols_with_nonzero)] = np.exp(x)
+
+        return lmdp
+
+    
 class Minigrid_MDP(MDP):
 
     DIR_TO_VEC = [
@@ -179,6 +213,13 @@ class Minigrid_MDP(MDP):
         at_goal = pos is not None and pos.type == "goal"
         return at_goal
     
+    def embedding_to_LMDP(self):
+        from environments.LMDP import Minigrid
+
+        lmdp = super().embedding_to_LMDP()
+        lmdp_minigrid = Minigrid(self.grid_size, walls = self.env.walls, env = self.env, P0 = lmdp.P0, R = lmdp.R)
+        return lmdp_minigrid
+
     # Auxiliary Methods
     
     def print_attributes(self):
