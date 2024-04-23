@@ -7,10 +7,9 @@ from scipy.sparse import csr_matrix, isspmatrix_csr
 
 
 class LMDP:
-    def __init__(self, n_states, n_terminal_states, n_actions):
+    def __init__(self, n_states, n_terminal_states):
         self.n_states = n_states
         self.n_nonterminal_states = n_states - n_terminal_states
-        self.n_actions = n_actions
         self.P0 = np.zeros((self.n_nonterminal_states, n_states))
         self.R = np.zeros(n_states)
         self.T = [] # Terminal states
@@ -63,7 +62,8 @@ class LMDP:
         return V
   
     def embedding_to_MDP(self, lmbda = 1):
-        mdp = MDP(self.n_states, len(self.T), self.n_actions)
+        n_actions = np.max((self.P0 > 0).sum(axis=1))
+        mdp = MDP(self.n_states, len(self.T), n_actions)
         mdp.T = self.T
         Z_opt, _ = self.power_iteration(lmbda)
         Pu = self.compute_Pu(Z_opt)
@@ -95,8 +95,7 @@ class Minigrid(LMDP):
     def __init__(self, grid_size = 14, walls = [], env = None, P0 = None, R = None):
         self.grid_size = grid_size
         self.n_orientations = 4
-        super().__init__(n_states = self.n_orientations*(grid_size*grid_size - len(walls)), n_terminal_states = self.n_orientations, n_actions = 3)
-        self.actions = list(range(self.n_actions))
+        super().__init__(n_states = self.n_orientations*(grid_size*grid_size - len(walls)), n_terminal_states = self.n_orientations)
         self._create_environment(grid_size, walls, env)
         self.n_cells = int(self.n_states / self.n_orientations)
 

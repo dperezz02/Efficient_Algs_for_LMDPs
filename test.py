@@ -17,35 +17,38 @@ if __name__ == "__main__":
     minigrid_mdp = Minigrid_MDP(grid_size=grid_size, walls = walls)
     minigrid_mdp_plots = Minigrid_MDP_Plotter(minigrid_mdp)
 
-    gamma = 1
-    epsilon = 1e-10
-    n_iters = int(1e6)
+    minigrid_lmdp = minigrid_mdp.embedding_to_LMDP()
+    
+
+    # gamma = 1
+    # epsilon = 1e-10
+    # n_iters = int(1e6)
 
     #TODO make embedding function, check value iteration and R
 
     # Value Iteration MDP
-    start_time = time.time()
-    Q, opt_policy, n_steps = minigrid_mdp.value_iteration(epsilon, gamma)
-    print("Value iteration took: ", n_steps, " steps before converging with epsilon:", epsilon)
-    print("--- %s minutes and %s seconds ---" % (int((time.time() - start_time)/60), int((time.time() - start_time) % 60)))
-    #opt_lengths = list(minigrid_mdp.shortest_path_length(opt_policy, s) for s in range(minigrid_mdp.n_states))
-    # plot_greedy_policy(opt_policy, minigrid_mdp, print_policy=True)
-    minigrid_mdp_plots.plot_value_function(Q, print_values=True, file = "value_function.txt")
-    #minigrid_mdp_plots.plot_path(opt_policy, path = 'plots\MDP_value_iteration_path.gif')
+    # start_time = time.time()
+    # Q, opt_policy, n_steps = minigrid_mdp.value_iteration(epsilon, gamma)
+    # print("Value iteration took: ", n_steps, " steps before converging with epsilon:", epsilon)
+    # print("--- %s minutes and %s seconds ---" % (int((time.time() - start_time)/60), int((time.time() - start_time) % 60)))
+    # #opt_lengths = list(minigrid_mdp.shortest_path_length(opt_policy, s) for s in range(minigrid_mdp.n_states))
+    # # plot_greedy_policy(opt_policy, minigrid_mdp, print_policy=True)
+    # minigrid_mdp_plots.plot_value_function(Q, print_values=True, file = "value_function.txt")
+    # #minigrid_mdp_plots.plot_path(opt_policy, path = 'plots\MDP_value_iteration_path.gif')
 
-    lmdp_minigrid = minigrid_mdp.embedding_to_LMDP()
-    print(lmdp_minigrid.R)
+    # lmdp_minigrid = minigrid_mdp.embedding_to_LMDP()
+    # print(lmdp_minigrid.R)
 
-    # Power Iteration LMDP
-    lmbda = 1
-    Z, n_steps = lmdp_minigrid.power_iteration(lmbda = lmbda, epsilon=epsilon)
-    print("Power iteration took: ", n_steps, " steps before converging with epsilon:", epsilon)
-    print("\n\n")
-    V = lmdp_minigrid.Z_to_V(Z)
-    with open("value_function_power_iteration.txt", "w") as f: # Print the transition matrix from power iteration
-        for i in range(lmdp_minigrid.n_states):
-            f.write("V[{}]: {}\n".format(lmdp_minigrid.states[i], V[i]))
-    print("Total embedding error: ", np.sum(np.abs(V-Q.max(axis=1))))
+    # # Power Iteration LMDP
+    # lmbda = 1
+    # Z, n_steps = lmdp_minigrid.power_iteration(lmbda = lmbda, epsilon=epsilon)
+    # print("Power iteration took: ", n_steps, " steps before converging with epsilon:", epsilon)
+    # print("\n\n")
+    # V = lmdp_minigrid.Z_to_V(Z)
+    # with open("value_function_power_iteration.txt", "w") as f: # Print the transition matrix from power iteration
+    #     for i in range(lmdp_minigrid.n_states):
+    #         f.write("V[{}]: {}\n".format(lmdp_minigrid.states[i], V[i]))
+    # print("Total embedding error: ", np.sum(np.abs(V-Q.max(axis=1))))
 
     # Q-learning
     #print("Q-learning training...")

@@ -50,7 +50,7 @@ class MDP:
     
     def embedding_to_LMDP(self):
         from environments.LMDP import LMDP
-        lmdp = LMDP(self.n_states, len(self.T), self.n_actions)
+        lmdp = LMDP(self.n_states, len(self.T))
         lmdp.T = self.T
 
         for state in range(self.n_nonterminal_states): 
@@ -75,7 +75,7 @@ class MDP:
             q = -np.log(np.sum(np.exp(x_hat)))
             x = x_hat + q
 
-            lmdp.R[state] = -np.exp(q)
+            lmdp.R[state] = -q#np.exp(q)
             # Atribute the values in 'x' to the correct columns in 'baj'
             lmdp.P0[state, np.flatnonzero(cols_with_nonzero)] = np.exp(x)
 
