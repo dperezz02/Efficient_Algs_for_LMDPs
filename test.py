@@ -34,6 +34,7 @@ if __name__ == "__main__":
     #minigrid_mdp_plots.plot_path(opt_policy, path = 'plots\MDP_value_iteration_path.gif')
 
     lmdp_minigrid = minigrid_mdp.embedding_to_LMDP()
+    print(lmdp_minigrid.R)
 
     # Power Iteration LMDP
     lmbda = 1

@@ -11,3 +11,7 @@ if __name__ == "__main__":
     mdp = g.embedding_to_MDP()
     Q, pi, n = mdp.value_iteration(1e-10, 1)
     print(Q.max(axis=1))
+
+    lmdp = mdp.embedding_to_LMDP()
+    Z, nsteps = lmdp.power_iteration(1, 1e-10)
+    print(g.Z_to_V(Z))
