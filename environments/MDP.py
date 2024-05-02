@@ -55,6 +55,7 @@ class MDP:
 
         for state in range(self.n_nonterminal_states): 
             baj = self.P[state]
+            #print(baj)
             epsilon = 1e-8
             # Find columns that contain any non-zero values
             cols_with_nonzero = np.any(baj != 0, axis=0)
@@ -64,21 +65,28 @@ class MDP:
             baj /= baj.sum(axis=1)[:, np.newaxis]
             # Remove the zero columns
             baj = baj[:, cols_with_nonzero]
+            #print("baj:", baj)
 
             la = -self.R[state]
+            
             hia = np.sum(baj*np.log(baj), axis=1)
+            #print(hia)
             y = la - hia
+            #print(y)
 
             baj_pinv = np.linalg.pinv(baj)
+            #print(baj_pinv)
             x_hat = -np.dot(baj_pinv, y)
+            #print(x_hat)
 
-            q = -np.log(np.sum(np.exp(x_hat)))
+            q = -np.log(np.sum(np.exp(x_hat))) #TODO: Check ln(n_actions)
+            #print(q)
             x = x_hat + q
+            #print(x)
 
-            lmdp.R[state] = -q#np.exp(q)
+            lmdp.R[state] = -q #- np.log(baj.shape[1]) #np.exp(q)
             # Atribute the values in 'x' to the correct columns in 'baj'
             lmdp.P0[state, np.flatnonzero(cols_with_nonzero)] = np.exp(x)
-
         return lmdp
 
     

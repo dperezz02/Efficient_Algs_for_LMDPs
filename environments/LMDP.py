@@ -62,7 +62,7 @@ class LMDP:
         return V
   
     def embedding_to_MDP(self, lmbda = 1):
-        n_actions = np.max((self.P0 > 0).sum(axis=1))
+        n_actions = 4#np.max((self.P0 > 0).sum(axis=1))
         mdp = MDP(self.n_states, len(self.T), n_actions)
         mdp.T = self.T
         Z_opt, _ = self.power_iteration(lmbda)
@@ -98,6 +98,7 @@ class Minigrid(LMDP):
         super().__init__(n_states = self.n_orientations*(grid_size*grid_size - len(walls)), n_terminal_states = self.n_orientations)
         self._create_environment(grid_size, walls, env)
         self.n_cells = int(self.n_states / self.n_orientations)
+        self.actions = list(range(3)) #TODO: change
 
         if P0 is None:
             self._create_P0()
@@ -133,7 +134,7 @@ class Minigrid(LMDP):
         for state in self.S: #range(self.n_states): 
             for action in self.actions:
                 next_state = self.state_step(self.states[state], action)
-                self.P0[state][self.state_to_index[next_state]] += 1/self.n_actions
+                self.P0[state][self.state_to_index[next_state]] += 1/len(self.actions)
         if sparse:
             self.P0 = csr_matrix(self.P0)
 

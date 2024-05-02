@@ -47,21 +47,21 @@ class SimpleGrid_MDP(MDP):
                 state = x * size + y
                 if state < self.n_nonterminal_states:
                     if x > 0:
-                        self.P[state][0][(x - 1) * size + y] += 1
+                        self.P[state][0][(x - 1) * size + y] = 1
                     else:
-                        self.P[state][0][state] += 1
+                        self.P[state][0][state] = 1
                     if x + 1 < size:
-                        self.P[state][1][(x + 1) * size + y] += 1
+                        self.P[state][1][(x + 1) * size + y] = 1
                     else:
-                        self.P[state][1][state] += 1
+                        self.P[state][1][state] = 1
                     if y > 0:
-                        self.P[state][2][x * size + y - 1] += 1
+                        self.P[state][2][x * size + y - 1] = 1
                     else:
-                        self.P[state][2][state] += 1
+                        self.P[state][2][state] = 1
                     if y + 1 < size:
-                        self.P[state][3][x * size + y + 1] += 1
+                        self.P[state][3][x * size + y + 1] = 1
                     else:
-                        self.P[state][3][state] += 1
+                        self.P[state][3][state] = 1
 
         # construct reward function
-        self.R[0:self.n_nonterminal_states][:] = -1
+        self.R[0:self.n_nonterminal_states][:] = -2
