@@ -53,25 +53,33 @@ class MDP:
         lmdp = environments.lmdp.LMDP(self.n_states, len(self.T))
         lmdp.T = self.T
 
+
         for state in range(self.n_nonterminal_states): 
             D = self.P[state]
-            epsilon = 1e-10
+            is_deterministic = (np.count_nonzero(D, axis=1) == np.ones(self.n_actions)).all()
+            
+            if is_deterministic:
+                lmdp.R[state] = np.sum(self.R[state])/self.n_actions
+                #TODO: Finish deterministic embedding
+            else:
+                
+                epsilon = 1e-10
+                # Find columns that contain any non-zero values and remove the rest
+                cols_with_nonzero = np.any(D != 0, axis=0)
+                D = D[:, cols_with_nonzero]
+                # Substitute 0s in those columns with 'epsilon' and renormalize
+                D = np.where(D == 0, epsilon, D)
+                D /= D.sum(axis=1)[:, np.newaxis]
 
-            # Find columns that contain any non-zero values and remove the rest
-            cols_with_nonzero = np.any(D != 0, axis=0)
-            D = D[:, cols_with_nonzero]
-            # Substitute 0s in those columns with 'epsilon' and renormalize
-            D = np.where(D == 0, epsilon, D)
-            D /= D.sum(axis=1)[:, np.newaxis]
+                b = -self.R[state]  -np.sum(D * np.log(D), axis = 1) 
+                c = np.linalg.pinv(D) @ b
 
-            b = -self.R[state]  -np.sum(D * np.log(D), axis = 1) 
-            c = np.linalg.pinv(D) @ b
+                q = -np.log(np.sum(np.exp(-c)))
+                m = q - c
 
-            q = -np.log(np.sum(np.exp(-c)))
-            m = q - c
+                lmdp.R[state] = -q 
+                lmdp.P0[state, np.flatnonzero(cols_with_nonzero)] = np.exp(m)
 
-            lmdp.R[state] = -q 
-            lmdp.P0[state, np.flatnonzero(cols_with_nonzero)] = np.exp(m)
         
         return lmdp
 

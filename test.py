@@ -10,7 +10,7 @@ from scipy.sparse import csr_matrix
 
 if __name__ == "__main__":
 
-    grid_size = 10
+    grid_size = 5
     walls = []#(14,1), (1,8), (5, 5), (12, 5), (8, 7), (2,5), (3,5), (4,5), (6,5), (7,5), (8,5), (9,5), (10,5), (11,5), (13,5), (15,9)]
     
     # MDP
@@ -72,8 +72,7 @@ if __name__ == "__main__":
     # Power Iteration LMDP
     lmbda = 1
     Z, n_steps = minigrid.power_iteration(lmbda = lmbda, epsilon=epsilon)
-    print("Power iteration took: ", n_steps, " steps before converging with epsilon:", epsilon)
-    print("\n\n")
+    #print("Power iteration took: ", n_steps, " steps before converging with epsilon:", epsilon)
     #minigrid_plots.show_Z(Z, print_Z=True, plot_Z = False, file = "Z_function_power_iteration.txt")
     # PU = minigrid.compute_Pu(Z)
     # with open("PU_power_iteration.txt", "w") as f: # Print the transition matrix from power iteration
@@ -108,8 +107,7 @@ if __name__ == "__main__":
     minigrid_mdp_embedded_plots = Minigrid_MDP_Plotter(mdp_minigrid)
     start_time = time.time()
     Q2, opt_policy2, n_steps = mdp_minigrid.value_iteration(epsilon, gamma)
-    print("Value iteration took: ", n_steps, " steps before converging with epsilon:", epsilon)
-    print("--- %s minutes and %s seconds ---" % (int((time.time() - start_time)/60), int((time.time() - start_time) % 60)))
+    #print("Value iteration took: ", n_steps, " steps before converging with epsilon:", epsilon)
     # # # plot_greedy_policy(greedy_policy, mdp_minigrid, print_policy=True)
     # minigrid_mdp_embedded_plots.plot_value_function(Q2, print_values=True, file = "value_function_embedded.txt")
     # # #minigrid_mdp_embedded_plots.plot_path(opt_policy2, path = 'plots\MDP_embedded_value_iteration_path.gif')
@@ -119,8 +117,7 @@ if __name__ == "__main__":
     #print(minigrid_lmdp.R)
     #print(minigrid_lmdp.P0)
     Z, n_steps = minigrid_lmdp.power_iteration(lmbda = lmbda, epsilon=epsilon)
-    print("Power iteration took: ", n_steps, " steps before converging with epsilon:", epsilon)
-    print("\n\n")
+    #print("Power iteration took: ", n_steps, " steps before converging with epsilon:", epsilon)
     V = minigrid.Z_to_V(Z)
     print("Total embedding error: ", np.sum(np.abs(V-Q2.max(axis=1))))
     # with open("value_function_power_iteration_embedded.txt", "w") as f: # Print the transition matrix from power iteration

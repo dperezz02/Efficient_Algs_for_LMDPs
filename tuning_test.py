@@ -1,5 +1,5 @@
-from environments.MDP import Minigrid_MDP
-from environments.LMDP import Minigrid
+from environments.mdp import Minigrid_MDP
+from environments.lmdp import Minigrid
 import numpy as np
 import time
 from utils.plot import Plotter, Minigrid_MDP_Plotter
