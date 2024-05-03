@@ -64,4 +64,4 @@ class SimpleGrid_MDP(MDP):
                         self.P[state][3][state] = 1
 
         # construct reward function
-        self.R[0:self.n_nonterminal_states][:] = -2
+        self.R[0:self.n_nonterminal_states][:] = -1

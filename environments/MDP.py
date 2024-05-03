@@ -2,6 +2,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from gym.wrappers import OrderEnforcing
 from environments.grid import CustomEnv
+import scipy
 
 class MDP:
     def __init__(self, n_states, n_terminal_states, n_actions):
@@ -47,46 +48,32 @@ class MDP:
             s, _, done = self.act(s, optimal_policy[s])
             n_steps += 1
         return n_steps
-    
+
     def embedding_to_LMDP(self):
         from environments.LMDP import LMDP
         lmdp = LMDP(self.n_states, len(self.T))
         lmdp.T = self.T
 
         for state in range(self.n_nonterminal_states): 
-            baj = self.P[state]
-            #print(baj)
-            epsilon = 1e-8
-            # Find columns that contain any non-zero values
-            cols_with_nonzero = np.any(baj != 0, axis=0)
-            # Substitute 0s in those columns with 'epsilon'
-            baj[:, cols_with_nonzero] = np.where(baj[:, cols_with_nonzero] == 0, epsilon, baj[:, cols_with_nonzero])
-            # Renormalize rows to sum to one
-            baj /= baj.sum(axis=1)[:, np.newaxis]
-            # Remove the zero columns
-            baj = baj[:, cols_with_nonzero]
-            #print("baj:", baj)
-
-            la = -self.R[state]
+            D = self.P[state]
+            epsilon = 1e-10
             
-            hia = np.sum(baj*np.log(baj), axis=1)
-            #print(hia)
-            y = la - hia
-            #print(y)
+            # Find columns that contain any non-zero values and remove the rest
+            cols_with_nonzero = np.any(D != 0, axis=0)
+            D = D[:, cols_with_nonzero]
+            # Substitute 0s in those columns with 'epsilon' and renormalize
+            D = np.where(D == 0, epsilon, D)
+            D /= D.sum(axis=1)[:, np.newaxis]
 
-            baj_pinv = np.linalg.pinv(baj)
-            #print(baj_pinv)
-            x_hat = -np.dot(baj_pinv, y)
-            #print(x_hat)
+            ba = -self.R[state]  -np.sum(D * np.log(D), axis = 1) 
+            c = np.linalg.pinv(D) @ ba
 
-            q = -np.log(np.sum(np.exp(x_hat))) #TODO: Check ln(n_actions)
-            #print(q)
-            x = x_hat + q
-            #print(x)
+            q = -np.log(np.sum(np.exp(-c)))
+            m = q - c
 
-            lmdp.R[state] = -q #- np.log(baj.shape[1]) #np.exp(q)
-            # Atribute the values in 'x' to the correct columns in 'baj'
-            lmdp.P0[state, np.flatnonzero(cols_with_nonzero)] = np.exp(x)
+            lmdp.R[state] = -q 
+            lmdp.P0[state, np.flatnonzero(cols_with_nonzero)] = np.exp(m)
+        
         return lmdp
 
     
