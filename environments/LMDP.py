@@ -2,7 +2,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from gym.wrappers import OrderEnforcing
 from environments.grid import CustomEnv
-from environments.MDP import MDP, Minigrid_MDP
+from environments.mdp import MDP, Minigrid_MDP
 from scipy.sparse import csr_matrix, isspmatrix_csr
 
 

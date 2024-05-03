@@ -1,6 +1,6 @@
 import numpy as np
-from environments.LMDP import LMDP
-from environments.MDP import MDP
+from environments.lmdp import LMDP
+from environments.mdp import MDP
 
 class SimpleGrid(LMDP):
 

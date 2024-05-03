@@ -2,7 +2,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from gym.wrappers import OrderEnforcing
 from environments.grid import CustomEnv
-import scipy
+import environments
 
 class MDP:
     def __init__(self, n_states, n_terminal_states, n_actions):
@@ -50,14 +50,13 @@ class MDP:
         return n_steps
 
     def embedding_to_LMDP(self):
-        from environments.LMDP import LMDP
-        lmdp = LMDP(self.n_states, len(self.T))
+        lmdp = environments.lmdp.LMDP(self.n_states, len(self.T))
         lmdp.T = self.T
 
         for state in range(self.n_nonterminal_states): 
             D = self.P[state]
             epsilon = 1e-10
-            
+
             # Find columns that contain any non-zero values and remove the rest
             cols_with_nonzero = np.any(D != 0, axis=0)
             D = D[:, cols_with_nonzero]
@@ -65,8 +64,8 @@ class MDP:
             D = np.where(D == 0, epsilon, D)
             D /= D.sum(axis=1)[:, np.newaxis]
 
-            ba = -self.R[state]  -np.sum(D * np.log(D), axis = 1) 
-            c = np.linalg.pinv(D) @ ba
+            b = -self.R[state]  -np.sum(D * np.log(D), axis = 1) 
+            c = np.linalg.pinv(D) @ b
 
             q = -np.log(np.sum(np.exp(-c)))
             m = q - c
@@ -209,7 +208,7 @@ class Minigrid_MDP(MDP):
         return at_goal
     
     def embedding_to_LMDP(self):
-        from environments.LMDP import Minigrid
+        from environments.lmdp import Minigrid
 
         lmdp = super().embedding_to_LMDP()
         lmdp_minigrid = Minigrid(self.grid_size, walls = self.env.walls, env = self.env, P0 = lmdp.P0, R = lmdp.R)
