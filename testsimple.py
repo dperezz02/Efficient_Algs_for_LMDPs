@@ -37,13 +37,11 @@ if __name__ == "__main__":
     mdp = SimpleGrid_MDP(grid_size)
     #print(mdp.P, mdp.R)
     Q, pi, n = mdp.value_iteration(1e-10, 1)
-    #print(Q.max(axis=1))
+    print(Q.max(axis=1))
 
     lmdp = mdp.embedding_to_LMDP()
-    # print(lmdp.R)
-    # print(lmdp.P0)
     Z, nsteps = lmdp.power_iteration(1, 1e-10)
-    #print(lmdp.Z_to_V(Z))
+    print(lmdp.Z_to_V(Z))
 
     # mdp2 = lmdp.embedding_to_MDP()
     # Q, pi, n = mdp2.value_iteration(1e-10, 1)

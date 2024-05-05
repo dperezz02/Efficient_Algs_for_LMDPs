@@ -62,7 +62,7 @@ class LMDP:
         return V
   
     def embedding_to_MDP(self, lmbda = 1):
-        n_actions = 4#np.max((self.P0 > 0).sum(axis=1))
+        n_actions = np.max((self.P0 > 0).sum(axis=1))
         mdp = MDP(self.n_states, len(self.T), n_actions)
         mdp.T = self.T
         Z_opt, _ = self.power_iteration(lmbda)

@@ -60,9 +60,9 @@ class MDP:
             
             if is_deterministic:
                 lmdp.R[state] = np.sum(self.R[state])/self.n_actions
-                #TODO: Finish deterministic embedding
-            else:
-                
+                lmdp.P0[state] = np.sum(D, axis = 0)/self.n_actions
+
+            else: 
                 epsilon = 1e-10
                 # Find columns that contain any non-zero values and remove the rest
                 cols_with_nonzero = np.any(D != 0, axis=0)
