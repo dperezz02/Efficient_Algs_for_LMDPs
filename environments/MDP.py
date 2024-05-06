@@ -49,36 +49,41 @@ class MDP:
             n_steps += 1
         return n_steps
 
-    def embedding_to_LMDP(self):
+    def embedding_to_LMDP(self, lmbda = 1):
         lmdp = environments.lmdp.LMDP(self.n_states, len(self.T))
         lmdp.T = self.T
 
+        is_deterministic = (np.count_nonzero(self.P, axis=2) == np.ones((self.n_nonterminal_states, self.n_actions))).all()
+        if is_deterministic:
+            lmdp.R = np.sum(self.R, axis = 1)/self.n_actions
+            lmdp.P0 = np.sum(self.P, axis = 1)/self.n_actions
+
+            Z_opt, _ = lmdp.power_iteration(lmbda)
+            Pu = lmdp.compute_Pu(Z_opt)
+
+            for state in range(self.n_nonterminal_states):
+                lmdp.R[state] = np.sum(self.R[state])/self.n_actions + lmbda * np.sum(Pu[state].data * np.log(Pu[state].data / lmdp.P0[state,Pu[state].indices]))
+
+            return lmdp
 
         for state in range(self.n_nonterminal_states): 
             D = self.P[state]
-            is_deterministic = (np.count_nonzero(D, axis=1) == np.ones(self.n_actions)).all()
-            
-            if is_deterministic:
-                lmdp.R[state] = np.sum(self.R[state])/self.n_actions
-                lmdp.P0[state] = np.sum(D, axis = 0)/self.n_actions
+            epsilon = 1e-10
+            # Find columns that contain any non-zero values and remove the rest
+            cols_with_nonzero = np.any(D != 0, axis=0)
+            D = D[:, cols_with_nonzero]
+            # Substitute 0s in those columns with 'epsilon' and renormalize
+            D = np.where(D == 0, epsilon, D)
+            D /= D.sum(axis=1)[:, np.newaxis]
 
-            else: 
-                epsilon = 1e-10
-                # Find columns that contain any non-zero values and remove the rest
-                cols_with_nonzero = np.any(D != 0, axis=0)
-                D = D[:, cols_with_nonzero]
-                # Substitute 0s in those columns with 'epsilon' and renormalize
-                D = np.where(D == 0, epsilon, D)
-                D /= D.sum(axis=1)[:, np.newaxis]
+            b = -self.R[state]  -np.sum(D * np.log(D), axis = 1) 
+            c = np.linalg.pinv(D) @ b
 
-                b = -self.R[state]  -np.sum(D * np.log(D), axis = 1) 
-                c = np.linalg.pinv(D) @ b
+            q = -np.log(np.sum(np.exp(-c)))
+            m = q - c
 
-                q = -np.log(np.sum(np.exp(-c)))
-                m = q - c
-
-                lmdp.R[state] = -q 
-                lmdp.P0[state, np.flatnonzero(cols_with_nonzero)] = np.exp(m)
+            lmdp.R[state] = -q 
+            lmdp.P0[state, np.flatnonzero(cols_with_nonzero)] = np.exp(m)
 
         
         return lmdp

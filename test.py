@@ -38,7 +38,7 @@ if __name__ == "__main__":
     Z, n_steps = minigrid_lmdp.power_iteration(lmbda = lmbda, epsilon=epsilon)
     #print("Power iteration took: ", n_steps, " steps before converging with epsilon:", epsilon)
     V = minigrid_lmdp.Z_to_V(Z)
-    #print(V)
+    print(V)
     print("Total embedding error: ", np.sum(np.abs(V-Q.max(axis=1))))
 
     # lmdp_minigrid = minigrid_mdp.embedding_to_LMDP()
