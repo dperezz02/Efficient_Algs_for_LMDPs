@@ -10,7 +10,7 @@ from scipy.sparse import csr_matrix
 
 if __name__ == "__main__":
 
-    grid_size = 2
+    grid_size = 15
     walls = [] #(14,1), (1,8), (5, 5), (12, 5), (8, 7), (2,5), (3,5), (4,5), (6,5), (7,5), (8,5), (9,5), (10,5), (11,5), (13,5), (15,9)]
     
     # MDP
@@ -18,7 +18,6 @@ if __name__ == "__main__":
     minigrid_mdp_plots = Minigrid_MDP_Plotter(minigrid_mdp)
 
     # minigrid_lmdp = minigrid_mdp.embedding_to_LMDP()
-    
 
     gamma = 1
     epsilon = 1e-10
@@ -27,7 +26,7 @@ if __name__ == "__main__":
 
     # Value Iteration MDP
     Q, opt_policy, n_steps = minigrid_mdp.value_iteration(epsilon, gamma)
-    # print(Q.max(axis=1))
+    #print(Q.max(axis=1))
     # print("Value iteration took: ", n_steps, " steps before converging with epsilon:", epsilon)
     # opt_lengths = list(minigrid_mdp.shortest_path_length(opt_policy, s) for s in range(minigrid_mdp.n_states))
     # plot_greedy_policy(opt_policy, minigrid_mdp, print_policy=True)
@@ -38,8 +37,8 @@ if __name__ == "__main__":
     Z, n_steps = minigrid_lmdp.power_iteration(lmbda = lmbda, epsilon=epsilon)
     #print("Power iteration took: ", n_steps, " steps before converging with epsilon:", epsilon)
     V = minigrid_lmdp.Z_to_V(Z)
-    print(V)
-    print("Total embedding error: ", np.sum(np.abs(V-Q.max(axis=1))))
+    #print(V)
+    print("Total embedding error: ", np.sum(np.abs(V-Q.max(axis=1)))/np.sum(np.abs(Q.max(axis=1))))
 
     # lmdp_minigrid = minigrid_mdp.embedding_to_LMDP()
     # print(lmdp_minigrid.R)
@@ -118,7 +117,7 @@ if __name__ == "__main__":
     # # # plot_greedy_policy(greedy_policy, mdp_minigrid, print_policy=True)
     # minigrid_mdp_embedded_plots.plot_value_function(Q2, print_values=True, file = "value_function_embedded.txt")
     # # #minigrid_mdp_embedded_plots.plot_path(opt_policy2, path = 'plots\MDP_embedded_value_iteration_path.gif')
-    print("Total embedding error: ", np.sum(np.abs(V-Q2.max(axis=1))))
+    #print("Total embedding error: ", np.sum(np.abs(V-Q2.max(axis=1))))
 
     minigrid_lmdp = mdp_minigrid.embedding_to_LMDP()
     #print(minigrid_lmdp.R)
@@ -126,7 +125,7 @@ if __name__ == "__main__":
     Z, n_steps = minigrid_lmdp.power_iteration(lmbda = lmbda, epsilon=epsilon)
     #print("Power iteration took: ", n_steps, " steps before converging with epsilon:", epsilon)
     V = minigrid.Z_to_V(Z)
-    print("Total embedding error: ", np.sum(np.abs(V-Q2.max(axis=1))))
+    #print("Total embedding error: ", np.sum(np.abs(V-Q2.max(axis=1))))
     # with open("value_function_power_iteration_embedded.txt", "w") as f: # Print the transition matrix from power iteration
     #     for i in range(minigrid.n_states):
     #         f.write("V[{}]: {}\n".format(minigrid.states[i], V[i]))

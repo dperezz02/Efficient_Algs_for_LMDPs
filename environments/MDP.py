@@ -52,17 +52,24 @@ class MDP:
     def embedding_to_LMDP(self, lmbda = 1):
         lmdp = environments.lmdp.LMDP(self.n_states, len(self.T))
         lmdp.T = self.T
-
         is_deterministic = (np.count_nonzero(self.P, axis=2) == np.ones((self.n_nonterminal_states, self.n_actions))).all()
+        
         if is_deterministic:
+            Q, _, _ = self.value_iteration(1e-10, lmbda)
+            V = Q.max(axis=1)
+
             lmdp.R = np.sum(self.R, axis = 1)/self.n_actions
             lmdp.P0 = np.sum(self.P, axis = 1)/self.n_actions
 
-            Z_opt, _ = lmdp.power_iteration(lmbda)
-            Pu = lmdp.compute_Pu(Z_opt)
+            Z, _ = lmdp.power_iteration(lmbda)
+            while np.sum(np.abs(lmdp.Z_to_V(Z) - V))/np.sum(np.abs(V)) > 0.1:
+                Pu = lmdp.compute_Pu(Z)
+                row_indices = np.repeat(np.arange(Pu.shape[0]), np.diff(Pu.indptr))
+                log_ratio = np.log(Pu.data / lmdp.P0[row_indices, Pu.indices])
+                product = Pu.data * log_ratio
 
-            for state in range(self.n_nonterminal_states):
-                lmdp.R[state] = np.sum(self.R[state])/self.n_actions + lmbda * np.sum(Pu[state].data * np.log(Pu[state].data / lmdp.P0[state,Pu[state].indices]))
+                lmdp.R = np.sum(self.R, axis = 1)/self.n_actions + lmbda * np.concatenate((np.bincount(row_indices, weights=product), np.zeros(len(lmdp.T))))
+                Z, _ = lmdp.power_iteration(lmbda)
 
             return lmdp
 
