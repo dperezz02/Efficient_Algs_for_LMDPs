@@ -57,19 +57,36 @@ class MDP:
         if is_deterministic:
             Q, _, _ = self.value_iteration(1e-10, lmbda)
             V = Q.max(axis=1)
+            #print(V)
 
             lmdp.R = np.sum(self.R, axis = 1)/self.n_actions
             lmdp.P0 = np.sum(self.P, axis = 1)/self.n_actions
 
             Z, _ = lmdp.power_iteration(lmbda)
-            while np.sum(np.abs(lmdp.Z_to_V(Z) - V))/np.sum(np.abs(V)) > 0.1:
-                Pu = lmdp.compute_Pu(Z)
-                row_indices = np.repeat(np.arange(Pu.shape[0]), np.diff(Pu.indptr))
-                log_ratio = np.log(Pu.data / lmdp.P0[row_indices, Pu.indices])
-                product = Pu.data * log_ratio
+            Pu = lmdp.compute_Pu(Z)
+            row_indices = np.repeat(np.arange(Pu.shape[0]), np.diff(Pu.indptr))
+            log_ratio = np.log(Pu.data / lmdp.P0[row_indices, Pu.indices])
+            product = Pu.data * log_ratio
+            lmdp.R = np.sum(self.R, axis = 1)/self.n_actions + lmbda * np.concatenate((np.bincount(row_indices, weights=product), np.zeros(len(lmdp.T))))
+            R = lmdp.R
+            Z, _ = lmdp.power_iteration(lmbda)
 
-                lmdp.R = np.sum(self.R, axis = 1)/self.n_actions + lmbda * np.concatenate((np.bincount(row_indices, weights=product), np.zeros(len(lmdp.T))))
-                Z, _ = lmdp.power_iteration(lmbda)
+            #print(lmdp.Z_to_V(Z))
+            print(np.sum(np.abs(lmdp.Z_to_V(Z) - V))/np.sum(np.abs(V)))
+
+            K_min = 0
+            K_max = 1
+
+            while K_max - K_min > 1e-10:
+                K = (K_min + K_max)/2
+                lmdp.R = K * R
+                Z_new, _ = lmdp.power_iteration(lmbda)
+                if np.sum(np.abs(lmdp.Z_to_V(Z_new))) < np.sum(np.abs(V)):
+                    K_min = K
+                else:
+                    K_max = K
+                print(K, np.sum(np.abs(lmdp.Z_to_V(Z_new) - V))/np.sum(np.abs(V)))
+                #print(lmdp.Z_to_V(Z_new))
 
             return lmdp
 

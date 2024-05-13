@@ -10,7 +10,7 @@ from scipy.sparse import csr_matrix
 
 if __name__ == "__main__":
 
-    grid_size = 15
+    grid_size = 2
     walls = [] #(14,1), (1,8), (5, 5), (12, 5), (8, 7), (2,5), (3,5), (4,5), (6,5), (7,5), (8,5), (9,5), (10,5), (11,5), (13,5), (15,9)]
     
     # MDP
