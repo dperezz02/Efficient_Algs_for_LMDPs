@@ -57,7 +57,7 @@ class MDP:
         if is_deterministic:
             Q, _, _ = self.value_iteration(1e-10, lmbda)
             V = Q.max(axis=1)
-            #print(V)
+            print(V)
 
             lmdp.R = np.sum(self.R, axis = 1)/self.n_actions
             lmdp.P0 = np.sum(self.P, axis = 1)/self.n_actions
@@ -68,26 +68,29 @@ class MDP:
             log_ratio = np.log(Pu.data / lmdp.P0[row_indices, Pu.indices])
             product = Pu.data * log_ratio
             lmdp.R = np.sum(self.R, axis = 1)/self.n_actions + lmbda * np.concatenate((np.bincount(row_indices, weights=product), np.zeros(len(lmdp.T))))
-            R = lmdp.R
+            R = lmdp.R 
             Z, _ = lmdp.power_iteration(lmbda)
 
-            #print(lmdp.Z_to_V(Z))
-            print(np.sum(np.abs(lmdp.Z_to_V(Z) - V))/np.sum(np.abs(V)))
+            print(np.mean(np.square(lmdp.Z_to_V(Z) - V)[:self.n_nonterminal_states]/np.square(V)[:self.n_nonterminal_states]))
 
             K_min = 0
             K_max = 1
 
             while K_max - K_min > 1e-10:
-                K = (K_min + K_max)/2
-                lmdp.R = K * R
-                Z_new, _ = lmdp.power_iteration(lmbda)
-                if np.sum(np.abs(lmdp.Z_to_V(Z_new))) < np.sum(np.abs(V)):
-                    K_min = K
+                m1 = K_min + (K_max - K_min) / 3
+                m2 = K_max - (K_max - K_min) / 3
+                lmdp.R = m1 * R
+                Z1, _ = lmdp.power_iteration(lmbda)
+                sse1 = np.mean(np.square(lmdp.Z_to_V(Z1) - V)[:self.n_nonterminal_states]/np.square(V)[:self.n_nonterminal_states])
+                lmdp.R = m2 * R 
+                Z2, _ = lmdp.power_iteration(lmbda)
+                sse2 = np.mean(np.square(lmdp.Z_to_V(Z2) - V)[:self.n_nonterminal_states]/np.square(V)[:self.n_nonterminal_states])
+                if sse1 > sse2:
+                    K_min = m1
                 else:
-                    K_max = K
-                print(K, np.sum(np.abs(lmdp.Z_to_V(Z_new) - V))/np.sum(np.abs(V)))
-                #print(lmdp.Z_to_V(Z_new))
-
+                    K_max = m2
+            lmdp.R = K_min * R
+            print(K_min)
             return lmdp
 
         for state in range(self.n_nonterminal_states): 

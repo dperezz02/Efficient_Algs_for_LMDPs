@@ -2,7 +2,7 @@ from environments.simplegrid import SimpleGrid, SimpleGrid_MDP
 import numpy as np
 
 if __name__ == "__main__":
-    grid_size = 5
+    grid_size = 2
 
     g = SimpleGrid(grid_size)
     Z, nsteps = g.power_iteration(1, 1e-10)
