@@ -10,7 +10,7 @@ from scipy.sparse import csr_matrix
 
 if __name__ == "__main__":
 
-    grid_size = 10
+    grid_size = 2
     walls = [] #(14,1), (1,8), (5, 5), (12, 5), (8, 7), (2,5), (3,5), (4,5), (6,5), (7,5), (8,5), (9,5), (10,5), (11,5), (13,5), (15,9)]
     
     # MDP
@@ -37,7 +37,7 @@ if __name__ == "__main__":
     Z, n_steps = minigrid_lmdp.power_iteration(lmbda = lmbda, epsilon=epsilon)
     #print("Power iteration took: ", n_steps, " steps before converging with epsilon:", epsilon)
     V = minigrid_lmdp.Z_to_V(Z)
-    print(V)
+    #print(V)
     print("Total embedding error: ", np.mean(np.square(V - Q.max(axis=1))[:minigrid_lmdp.n_nonterminal_states]/np.square(Q.max(axis=1))[:minigrid_lmdp.n_nonterminal_states]))
 
     # lmdp_minigrid = minigrid_mdp.embedding_to_LMDP()

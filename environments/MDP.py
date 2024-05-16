@@ -9,26 +9,30 @@ class MDP:
         self.n_states = n_states
         self.n_nonterminal_states = n_states - n_terminal_states
         self.n_actions = n_actions
+        self.S = np.concatenate((np.ones(self.n_nonterminal_states, dtype=np.int8), np.zeros(n_terminal_states, dtype=np.int8)))
         self.P = np.zeros((self.n_nonterminal_states, n_actions, n_states))
         self.R = np.zeros((n_states, n_actions))
-        self.T = [] # Terminal states
         self.s0 = 0 
 
     def act(self, current_state, action):
+        """Transition function."""
+
         next_state = np.random.choice(self.n_states, p=self.P[current_state, action]) 
         reward = self.R[current_state, action]
-        terminal = next_state in self.T
+        terminal = self.S[next_state] == 0
         return next_state, reward, terminal
     
     def value_iteration(self, epsilon=1e-10, gamma = 0.95):
+        """Value iteration algorithm."""
+
         Q = np.zeros((self.n_states, self.n_actions))
         V_diff = np.arange(self.n_states)
         n_steps = 0
 
-        nonterminal_states = [i for i in range(self.n_states) if i not in self.T]
+        nonterminal_states = np.where(self.S)[0]
         R = self.R[nonterminal_states]
         P = gamma * self.P[nonterminal_states]
-        QT = self.R[self.T]
+        QT = self.R[np.where(self.S == 0)[0]]
 
         while max(V_diff) - min(V_diff) > epsilon:
             TQ = R + P @ Q.max(axis=1)
@@ -41,50 +45,54 @@ class MDP:
 
         return Q, greedy_policy, n_steps
     
-    def shortest_path_length(self, optimal_policy, s=0):
-        done = s in self.T
+    def shortest_path_length(self, policy, s=0):
+        """Compute the shortest path length from a given state to a terminal state.
+        :param policy: The policy to follow.
+        :param s: The starting state. """
+
+        done = self.S[s] == 0
         n_steps = 0
         while not done:
-            s, _, done = self.act(s, optimal_policy[s])
+            s, _, done = self.act(s, policy[s])
             n_steps += 1
         return n_steps
 
     def embedding_to_LMDP(self, lmbda = 1):
-        lmdp = environments.lmdp.LMDP(self.n_states, len(self.T))
-        lmdp.T = self.T
+        """Embed the MDP into an LMDP."""
+        lmdp = environments.lmdp.LMDP(self.n_states, self.n_states - self.n_nonterminal_states)
+        lmdp.S = self.S
         is_deterministic = (np.count_nonzero(self.P, axis=2) == np.ones((self.n_nonterminal_states, self.n_actions))).all()
         
+        # Apply the deterministic LMDP embedding
         if is_deterministic:
             Q, _, _ = self.value_iteration(1e-10, lmbda)
-            V = Q.max(axis=1)
-            print(V)
+            V = Q.max(axis=1)[np.where(self.S)[0]]
 
             lmdp.R = np.sum(self.R, axis = 1)/self.n_actions
             lmdp.P0 = np.sum(self.P, axis = 1)/self.n_actions
-
-            Z, _ = lmdp.power_iteration(lmbda)
+            
+            # Update reward function with KL divergence
+            Z, _ = lmdp.power_iteration(lmbda) #TODO: Adjust lmdp to S and fix rest of embedding
             Pu = lmdp.compute_Pu(Z)
             row_indices = np.repeat(np.arange(Pu.shape[0]), np.diff(Pu.indptr))
             log_ratio = np.log(Pu.data / lmdp.P0[row_indices, Pu.indices])
             product = Pu.data * log_ratio
-            lmdp.R = np.sum(self.R, axis = 1)/self.n_actions + lmbda * np.concatenate((np.bincount(row_indices, weights=product), np.zeros(len(lmdp.T))))
-            R = lmdp.R 
-            Z, _ = lmdp.power_iteration(lmbda)
-
-            print(np.mean(np.square(lmdp.Z_to_V(Z) - V)[:self.n_nonterminal_states]/np.square(V)[:self.n_nonterminal_states]))
+            R = np.sum(self.R, axis = 1)/self.n_actions + lmbda * np.concatenate((np.bincount(row_indices, weights=product), lmdp.R[np.where(lmdp.S == 0)[0]]))
 
             K_min = 0
             K_max = 1
 
-            while K_max - K_min > 1e-10:
+            # Find the optimal K through ternary search
+            while K_max - K_min > 1e-3:
                 m1 = K_min + (K_max - K_min) / 3
-                m2 = K_max - (K_max - K_min) / 3
                 lmdp.R = m1 * R
                 Z1, _ = lmdp.power_iteration(lmbda)
-                sse1 = np.mean(np.square(lmdp.Z_to_V(Z1) - V)[:self.n_nonterminal_states]/np.square(V)[:self.n_nonterminal_states])
+                sse1 = np.mean(np.square(lmdp.Z_to_V(Z1) - V)[:self.n_nonterminal_states]/np.square(V))
+                
+                m2 = K_max - (K_max - K_min) / 3
                 lmdp.R = m2 * R 
                 Z2, _ = lmdp.power_iteration(lmbda)
-                sse2 = np.mean(np.square(lmdp.Z_to_V(Z2) - V)[:self.n_nonterminal_states]/np.square(V)[:self.n_nonterminal_states])
+                sse2 = np.mean(np.square(lmdp.Z_to_V(Z2) - V)[:self.n_nonterminal_states]/np.square(V))
                 if sse1 > sse2:
                     K_min = m1
                 else:
@@ -160,25 +168,31 @@ class Minigrid_MDP(MDP):
         ]
         assert self.grid_size * self.grid_size - len(walls) == len(self.states) / self.n_orientations
         self.state_to_index = {state: index for index, state in enumerate(self.states)}
-        self.T = [
-            self.state_to_index[s] for s in self.states if self.terminal(self.state_to_index[s])
-        ]
-        self.S = [
-            self.state_to_index[s] for s in self.states if not self.terminal(self.state_to_index[s])
-        ]
+        self.S = np.array([
+            0 if self.terminal(s) else 1 for s in range(self.n_states)
+        ])
 
-    def _create_P(self): #index and np.array can be changed
-        for state in self.S:
+    def _create_P(self):
+        """Create the transition matrix for a deterministic MDP."""
+
+        for state in np.where(self.S)[0]:
             for action in self.actions:
                 next_state = self.state_step(self.states[state], action)
-                self.P[state][action] = np.array([1.0 if s == next_state else 0.0 for s in self.states]) # Assuming deterministic transitions
+                self.P[state][action] = np.array([1.0 if s == next_state else 0.0 for s in self.states])
 
-    def _reward_function(self):
-        for state in self.S:
+    def _reward_function(self, uniform_reward=True):
+        """Create the reward function for a deterministic MDP.
+        
+        :uniform_reward: Whether all actions lead to the same reward or it depends on their next state."""
+
+        for state in np.where(self.S)[0]:
             for action in self.actions:
-                # next_state = self.state_step(state, action)
-                # pos = self.env.grid.get(next_state[0], next_state[1])
-                self.R[state][action] =  -1.0
+                if uniform_reward:
+                    self.R[state][action] = -1.0
+                else:
+                    next_state = self.state_step(self.states[state], action)
+                    pos = self.env.grid.get(next_state[0], next_state[1])
+                    self.R[state][action] = -1.0 if pos is None or pos.type != "goal" else 0.0
 
     def _is_valid_position(self, x: int, y: int) -> bool:
         """Testing whether a coordinate is a valid location."""
