@@ -10,28 +10,33 @@ class LMDP:
     def __init__(self, n_states, n_terminal_states):
         self.n_states = n_states
         self.n_nonterminal_states = n_states - n_terminal_states
+        self.S = np.concatenate((np.ones(self.n_nonterminal_states, dtype=np.int8), np.zeros(n_terminal_states, dtype=np.int8)))
         self.P0 = np.zeros((self.n_nonterminal_states, n_states))
         self.R = np.zeros(n_states)
-        self.T = [] # Terminal states
         self.s0 = 0 
 
-    def act(self, current_state, P): 
+    def act(self, current_state, P):
+        """Transition function."""
+
+        # Check if the transition matrix is sparse 
         if isspmatrix_csr(P):
             next_state = np.random.choice(P[current_state].indices, p=P[current_state].data) # Using sparse matrix
         else:
             next_state = np.random.choice(self.n_states, p=P[current_state])
         reward = self.R[next_state]
-        terminal = next_state in self.T
+        terminal = self.S[next_state] == 0
         return next_state, reward, terminal
     
     def power_iteration(self, lmbda = 1, epsilon = 1e-10):
+        """Power iteration algorithm to compute the optimal Z function."""
+
         Z = np.ones(self.n_states)
         V_diff = np.arange(self.n_states)
         n_steps = 0
         
-        nonterminal_states = [i for i in range(self.n_states) if i not in self.T]
+        nonterminal_states = np.where(self.S)[0]
         G = np.diag(np.exp(self.R[nonterminal_states] / lmbda))
-        ZT = np.exp(self.R[self.T] / lmbda)
+        ZT = np.exp(self.R[np.where(self.S == 0)[0]] / lmbda)
 
         while max(V_diff) - min(V_diff) > epsilon:
             TZ = G @ self.P0 @ Z
@@ -123,12 +128,9 @@ class Minigrid(LMDP):
         ]
         assert self.grid_size * self.grid_size - len(walls) == len(self.states) / self.n_orientations
         self.state_to_index = {state: index for index, state in enumerate(self.states)}
-        self.T = [
-            self.state_to_index[s] for s in self.states if self.terminal(self.state_to_index[s])
-        ]
-        self.S = [
-            self.state_to_index[s] for s in self.states if not self.terminal(self.state_to_index[s])
-        ]
+        self.S = np.array([
+            0 if self.terminal(s) else 1 for s in range(self.n_states)
+        ])
 
     def _create_P0(self, sparse = True):
         for state in self.S: #range(self.n_states): 
