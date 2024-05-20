@@ -77,7 +77,7 @@ class MDP:
 
             # Update reward function with KL divergence
             Z, _ = lmdp.power_iteration(lmbda)
-            Pu = lmdp.compute_Pu(Z)
+            Pu = lmdp.compute_Pu(Z, sparse=True)
             row_indices = np.repeat(np.arange(Pu.shape[0]), np.diff(Pu.indptr))
             log_ratio = np.log(Pu.data / lmdp.P0[row_indices, Pu.indices])
             product = Pu.data * log_ratio
@@ -142,39 +142,40 @@ class Minigrid_MDP(MDP):
         np.array((0, -1)),
     ]
 
-    def __init__(self, grid_size = 14, walls = [], env = None, P = None, R = None):
+    def __init__(self, grid_size = 14, walls = [], dynamics = None):
+        """Initialize the Minigrid MDP."""
+
         self.grid_size = grid_size
         self.n_orientations = 4
-        super().__init__(n_states = self.n_orientations*(grid_size*grid_size - len(walls)), n_terminal_states = self.n_orientations, n_actions = 3)
-        self.actions = list(range(self.n_actions))
-        self._create_environment(grid_size, walls, env)
+        self.actions = list(range(3))
+        self._create_environment(grid_size, walls)
+
+        super().__init__(n_states = len(self.states), n_terminal_states = np.count_nonzero(self.S == 0), n_actions = len(self.actions))
         self.n_cells = int(self.n_states / self.n_orientations)
 
-        if P is None:
+        if dynamics is None:
             self._create_P()
-        else:
-            self.P = P
-
-        if R is None: 
             self._reward_function()
-        else: 
-            self.R = R
+        else:
+            self.P = dynamics['P']
+            self.R = dynamics['R']
 
-    def _create_environment(self, grid_size, walls, env):
-        if env is None: 
-            self.env = OrderEnforcing(CustomEnv(size=grid_size+2, walls=walls, render_mode="rgb_array"))
-        else: 
-            self.env = env
+    def _create_environment(self, grid_size, walls):
+        """Create the Minigrid environment."""
+
+        self.env = OrderEnforcing(CustomEnv(size=grid_size+2, walls=walls, render_mode="rgb_array"))
         self.env.reset()
 
         self.states = [
-            (x, y, o) for x in range(1, self.env.grid.height) for y in range(1, self.env.grid.width) for o in range(4)
+            (x, y, o) for x in range(1, self.env.grid.height) for y in range(1, self.env.grid.width) for o in range(self.n_orientations)
             if self._is_valid_position(x, y)
         ]
-        assert self.grid_size * self.grid_size - len(walls) == len(self.states) / self.n_orientations
+        assert self.grid_size * self.grid_size - len(walls) == len(self.states) / self.n_orientations, "Invalid number of states"
         self.state_to_index = {state: index for index, state in enumerate(self.states)}
+        
+        # Keep track of terminal and non-terminal states
         self.S = np.array([
-            0 if self.terminal(s) else 1 for s in range(self.n_states)
+            0 if self._is_terminal(s) else 1 for s in range(len(self.states))
         ])
 
     def _create_P(self):
@@ -182,7 +183,7 @@ class Minigrid_MDP(MDP):
 
         for state in np.where(self.S)[0]:
             for action in self.actions:
-                next_state = self.state_step(self.states[state], action)
+                next_state = self._state_step(self.states[state], action)
                 self.P[state][action] = np.array([1.0 if s == next_state else 0.0 for s in self.states])
 
     def _reward_function(self, uniform_reward=True):
@@ -195,20 +196,30 @@ class Minigrid_MDP(MDP):
                 if uniform_reward:
                     self.R[state][action] = -1.0
                 else:
-                    next_state = self.state_step(self.states[state], action)
+                    next_state = self._state_step(self.states[state], action)
                     pos = self.env.grid.get(next_state[0], next_state[1])
                     self.R[state][action] = -1.0 if pos is None or pos.type != "goal" else 0.0
 
     def _is_valid_position(self, x: int, y: int) -> bool:
         """Testing whether a coordinate is a valid location."""
+
         return (
             0 < x < self.env.width and
             0 < y < self.env.height and
             (self.env.grid.get(x, y) is None or self.env.grid.get(x, y).can_overlap())
         )
+    
+    def _is_terminal(self, x: int) -> bool:
+        """Check if a state is terminal."""
+        
+        state = self.states[x]
+        pos = self.env.grid.get(state[0], state[1])
+        at_goal = pos is not None and pos.type == "goal"
+        return at_goal
 
-    def state_step(self, state: tuple[int, int, int], action: int) -> tuple[int, int, int]:
+    def _state_step(self, state: tuple[int, int, int], action: int) -> tuple[int, int, int]:
         """Utility to move states one step forward, no side effect."""
+
         x, y, direction = state
 
         # Default transition to the sink failure state
@@ -235,6 +246,8 @@ class Minigrid_MDP(MDP):
     # Core Methods
 
     def reset(self, **kwargs):
+        """Reset the environment to the initial state. Used mainly for framework rendering."""
+
         state = self.s0
         self.env.reset(**kwargs)
         if state != self.state_to_index[tuple(np.array((*self.env.unwrapped.agent_start_pos, self.env.unwrapped.agent_start_dir), dtype=np.int32))]:
@@ -243,7 +256,9 @@ class Minigrid_MDP(MDP):
         assert self.state_to_index[tuple(self.observation())] == state
         return state
     
-    def step(self, state, action): # To interact with the environment. Used only for environment rendering. Removable?
+    def step(self, state, action):
+        """Step function to interact with the environment."""
+
         next_state, reward, done = self.act(state, action)
         for a in self.actions:
             if self.state_step(self.states[state], a) == self.states[next_state]:
@@ -252,25 +267,23 @@ class Minigrid_MDP(MDP):
 
     def observation(self): 
         """Transform observation."""
+
         obs = (*self.env.agent_pos, self.env.agent_dir)
         return np.array(obs, dtype=np.int32)
     
-    def render(self): #To simplify the rendering code
+    def render(self):
+        """Render the environment."""
+
         image = self.env.render()
         plt.imshow(image)
         plt.show()
     
-    def terminal(self, x: int) -> bool:
-        state = self.states[x]
-        pos = self.env.grid.get(state[0], state[1])
-        at_goal = pos is not None and pos.type == "goal"
-        return at_goal
-    
     def embedding_to_LMDP(self):
-        from environments.lmdp import Minigrid
+        """Embed the Minigrid MDP into a Minigrid LMDP."""
 
         lmdp, embedding_rmse = super().embedding_to_LMDP()
-        lmdp_minigrid = Minigrid(self.grid_size, walls = self.env.walls, env = self.env, P0 = lmdp.P0, R = lmdp.R)
+        dynamics = {'P0': lmdp.P0, 'R': lmdp.R}
+        lmdp_minigrid = environments.lmdp.Minigrid(self.grid_size, walls = self.env.walls, dynamics = dynamics)
         return lmdp_minigrid, embedding_rmse
 
     # Auxiliary Methods

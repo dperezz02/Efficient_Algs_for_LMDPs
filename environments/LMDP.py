@@ -54,6 +54,7 @@ class LMDP:
             # Normalize each row of the matrix
             row_sums = Pu.sum(axis=1)
             Pu = Pu.multiply(csr_matrix(1.0 / row_sums))
+
         else:
             P0 = self.P0.toarray() if isspmatrix_csr(self.P0) else self.P0
             Pu = self.P0 * Z  # Element-wise multiplication of P0 and Z
@@ -67,22 +68,39 @@ class LMDP:
         return V
   
     def embedding_to_MDP(self, lmbda = 1):
-        n_actions = np.max((self.P0 > 0).sum(axis=1))
-        mdp = MDP(self.n_states, len(self.T), n_actions)
-        mdp.T = self.T
+        """Embed the LMDP into an MDP."""
+        
+        # Extract the number of actions from nonzero transition probabilities
+        P0 = self.P0.toarray() if isspmatrix_csr(self.P0) else self.P0
+        n_actions = np.max((P0 > 0).sum(axis=1))
+        mdp = MDP(self.n_states, self.n_states - self.n_nonterminal_states, n_actions)
+        mdp.S = self.S
         Z_opt, _ = self.power_iteration(lmbda)
         Pu = self.compute_Pu(Z_opt)
 
-        for i in range(mdp.n_states):
-            mdp.R[i, :] = self.R[i] 
-            if i not in self.T:
-                p0 = self.P0[i,Pu[i].indices].toarray()[0] if isspmatrix_csr(self.P0) else self.P0[i,Pu[i].indices]
-                mdp.R[i, :] = self.R[i] - lmbda * np.sum(Pu[i].data * np.log(Pu[i].data / p0))
-                data = Pu[i].data
-                for a in range(mdp.n_actions):
-                    mdp.P[i, a, (Pu[i].indices)] = np.roll(data,a)
+        # Compute the reward function
+        row_indices = np.repeat(np.arange(Pu.shape[0]), np.diff(Pu.indptr))
+        log_ratio = np.log(Pu.data / P0[row_indices, Pu.indices])
+        product = Pu.data * log_ratio
+        mdp.R = self.R - lmbda * np.concatenate((np.bincount(row_indices, weights=product), self.R[np.where(self.S == 0)[0]]))
+        mdp.R = np.broadcast_to(mdp.R.reshape(-1, 1), (self.n_states, n_actions))
 
-        return mdp
+        # Compute the transition probabilities
+        nnz_per_row = np.diff(Pu.indptr)
+        source_states = np.repeat(np.arange(len(nnz_per_row)), nnz_per_row)
+        indices = Pu.indices.reshape(-1, 3)
+
+        for a in range(mdp.n_actions):
+            rolled_indices = np.roll(indices, -a, axis=1).flatten()
+            mdp.P[source_states, a, rolled_indices] = Pu.data
+
+        # Compute the embedding error
+        V_lmdp = self.Z_to_V(Z_opt)[np.where(self.S)[0]]
+        Q, _, _ = mdp.value_iteration(gamma=1)
+        V_mdp = Q.max(axis=1)[np.where(self.S)[0]]
+        embedding_rmse = np.mean(np.square(V_lmdp - V_mdp)/np.square(V_lmdp))
+
+        return mdp, embedding_rmse
     
 class Minigrid(LMDP):
 
@@ -97,29 +115,28 @@ class Minigrid(LMDP):
         np.array((0, -1)),
     ]
 
-    def __init__(self, grid_size = 14, walls = [], env = None, P0 = None, R = None):
+    def __init__(self, grid_size = 14, walls = [], dynamics = None):
+        """Initialize the minigrid environment."""
+
         self.grid_size = grid_size
         self.n_orientations = 4
-        super().__init__(n_states = self.n_orientations*(grid_size*grid_size - len(walls)), n_terminal_states = self.n_orientations)
-        self._create_environment(grid_size, walls, env)
+        self._create_environment(grid_size, walls)
+        
+        super().__init__(n_states = len(self.states), n_terminal_states = np.count_nonzero(self.S == 0))
         self.n_cells = int(self.n_states / self.n_orientations)
-        self.actions = list(range(3)) #TODO: change
+        
 
-        if P0 is None:
+        if dynamics is None:
             self._create_P0()
-        else:
-            self.P0 = P0
-
-        if R is None: 
             self._reward_function()
-        else: 
-            self.R = R
-
-    def _create_environment(self, grid_size, walls, env):
-        if env is None:
-            self.env = OrderEnforcing(CustomEnv(size=grid_size+2, walls=walls, render_mode="rgb_array"))
         else:
-            self.env = env
+            self.P0 = dynamics['P0']
+            self.R = dynamics['R']
+
+    def _create_environment(self, grid_size, walls):
+        """Create the environment for the minigrid."""
+
+        self.env = OrderEnforcing(CustomEnv(size=grid_size+2, walls=walls, render_mode="rgb_array"))
         self.env.reset()
 
         self.states = [
@@ -128,34 +145,49 @@ class Minigrid(LMDP):
         ]
         assert self.grid_size * self.grid_size - len(walls) == len(self.states) / self.n_orientations
         self.state_to_index = {state: index for index, state in enumerate(self.states)}
+        
+        # Keep track of the terminal and non-terminal states
         self.S = np.array([
-            0 if self.terminal(s) else 1 for s in range(self.n_states)
+            0 if self._is_terminal(s) else 1 for s in range(len(self.states))
         ])
 
     def _create_P0(self, sparse = True):
-        for state in self.S: #range(self.n_states): 
-            for action in self.actions:
-                next_state = self.state_step(self.states[state], action)
-                self.P0[state][self.state_to_index[next_state]] += 1/len(self.actions)
+        """Create the uncontrolled transition probabilities matrix for a stochastic LMDP."""
+
+        transitions = [self.env.actions.left, self.env.actions.right, self.env.actions.forward]
+        for state in np.where(self.S)[0]:
+            for t in transitions:
+                next_state = self.state_step(self.states[state], t)
+                self.P0[state][self.state_to_index[next_state]] += 1/len(transitions)
         if sparse:
             self.P0 = csr_matrix(self.P0)
 
     def _reward_function(self):
-        for state in self.S:
-            #pos = self.env.grid.get(state[0], state[1])
-            #at_goal = pos is not None and pos.type == "goal"
+        """Create the reward function for the minigrid environment."""
+
+        for state in np.where(self.S)[0]:
             self.R[state] = -1.0
 
     def _is_valid_position(self, x: int, y: int) -> bool:
         """Testing whether a coordinate is a valid location."""
+
         return (
             0 < x < self.env.width and
             0 < y < self.env.height and
             (self.env.grid.get(x, y) is None or self.env.grid.get(x, y).can_overlap())
         )
+    
+    def _is_terminal(self, x: int) -> bool:
+        """Check if a state is terminal."""
+
+        state = self.states[x]
+        pos = self.env.grid.get(state[0], state[1])
+        at_goal = pos is not None and pos.type == "goal"
+        return at_goal
 
     def state_step(self, state: tuple[int, int, int], action: int) -> tuple[int, int, int]:
         """Utility to move states one step forward, no side effect."""
+        
         x, y, direction = state
 
         # Default transition to the sink failure state
@@ -182,6 +214,8 @@ class Minigrid(LMDP):
     # Core Methods
 
     def reset(self, **kwargs):
+        """Reset the environment to the initial state. Used mainly for framework rendering."""
+
         state = self.s0
         self.env.reset(**kwargs)
         if state != self.state_to_index[tuple(np.array((*self.env.unwrapped.agent_start_pos, self.env.unwrapped.agent_start_dir), dtype=np.int32))]:
@@ -191,6 +225,8 @@ class Minigrid(LMDP):
         return state
     
     def step(self, state, P):
+        """Step function to interact with the environment."""
+
         next_state, reward, done = self.act(state, P)
         for action in self.actions:
             if self.state_step(self.states[state], action) == self.states[next_state]:
@@ -199,24 +235,24 @@ class Minigrid(LMDP):
 
     def observation(self):
         """Transform observation."""
+
         obs = (*self.env.agent_pos, self.env.agent_dir)
         return np.array(obs, dtype=np.int32)
     
     def render(self):
+        """Render the environment."""
+
         image = self.env.render()
         plt.imshow(image)
         plt.show()
     
-    def terminal(self, x: int) -> bool:
-        state = self.states[x]
-        pos = self.env.grid.get(state[0], state[1])
-        at_goal = pos is not None and pos.type == "goal"
-        return at_goal
-    
     def embedding_to_MDP(self):
-        mdp = super().embedding_to_MDP()
-        mdp_minigrid = Minigrid_MDP(self.grid_size, walls = self.env.walls, env = self.env, P = mdp.P, R = mdp.R)
-        return mdp_minigrid
+        """Embed the Minigrid lMDP into a Minigrid MDP."""
+
+        mdp, embedding_rmse = super().embedding_to_MDP()
+        dynamics = {'P': mdp.P, 'R': mdp.R}
+        mdp_minigrid = Minigrid_MDP(self.grid_size, walls = self.env.walls, dynamics = dynamics)
+        return mdp_minigrid, embedding_rmse
     
     # Auxiliary Methods
     
