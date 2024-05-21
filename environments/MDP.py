@@ -3,6 +3,7 @@ import matplotlib.pyplot as plt
 from gym.wrappers import OrderEnforcing
 from environments.grid import CustomEnv
 import environments
+from scipy.sparse import csr_matrix, isspmatrix_csr
 
 class MDP:
     def __init__(self, n_states, n_terminal_states, n_actions):
@@ -62,11 +63,12 @@ class MDP:
 
         # Compute the value function of the original MDP without discounting
         Q, _, _ = self.value_iteration(gamma=1)
-        V = Q.max(axis=1)[np.where(self.S)[0]]
+        V = Q.max(axis=1)
 
         # Create the LMDP
         lmdp = environments.lmdp.LMDP(self.n_states, self.n_states - self.n_nonterminal_states)
         lmdp.S = self.S
+        # Check if all actions from all states are deterministic. Otherwise, the stochastic LMDP embedding will perform better
         is_deterministic = (np.count_nonzero(self.P, axis=2) == np.ones((self.n_nonterminal_states, self.n_actions))).all()
 
         # Apply the deterministic LMDP embedding
@@ -86,18 +88,20 @@ class MDP:
             K_min = 0
             K_max = 1
 
+            #lmdp.P0 = csr_matrix(lmdp.P0)
+
             # Find the optimal K through ternary search
             while K_max - K_min > 1e-3:
                 m1 = K_min + (K_max - K_min) / 3
                 lmdp.R = m1 * R
-                Z1, _ = lmdp.power_iteration(lmbda)
-                rmse1 = np.mean(np.square(lmdp.Z_to_V(Z1)[np.where(self.S)[0]] - V)/np.square(V))
+                Z1, _ = lmdp.power_iteration(lmbda, epsilon=1e-2)
+                mse1 = np.mean(np.square(lmdp.Z_to_V(Z1) - V))
                 
                 m2 = K_max - (K_max - K_min) / 3
                 lmdp.R = m2 * R 
-                Z2, _ = lmdp.power_iteration(lmbda)
-                rmse2 = np.mean(np.square(lmdp.Z_to_V(Z2)[np.where(self.S)[0]] - V)/np.square(V))
-                if rmse1 > rmse2:
+                Z2, _ = lmdp.power_iteration(lmbda, epsilon=1e-2)
+                mse2 = np.mean(np.square(lmdp.Z_to_V(Z2) - V))
+                if mse1 > mse2:
                     K_min = m1
                 else:
                     K_max = m2
@@ -106,29 +110,29 @@ class MDP:
 
         # Apply the non-deterministic LMDP embedding (from Todorov et al. 2009)
         else:
-            for state in range(self.n_nonterminal_states): 
-                D = self.P[state]
-                epsilon = 1e-10
-                # Find columns that contain any non-zero values and remove the rest
-                cols_with_nonzero = np.any(D != 0, axis=0)
-                D = D[:, cols_with_nonzero]
-                # Substitute 0s in those columns with 'epsilon' and renormalize
-                D = np.where(D == 0, epsilon, D)
-                D /= D.sum(axis=1)[:, np.newaxis]
 
-                b = -self.R[state]  -np.sum(D * np.log(D), axis = 1) 
-                c = np.linalg.pinv(D) @ b
+            epsilon = 1e-10
+            D = self.P
+            # Find columns that contain any non-zero values and remove the rest
+            cols_with_nonzero = np.any(D != 0, axis=1)
+            D = np.array([D[i][:, cols_with_nonzero[i]] for i in range(D.shape[0])])
+            # Substitute 0s in those columns with 'epsilon' and renormalize
+            D = np.where(D == 0, epsilon, D)
+            D /= D.sum(axis=2)[:,:,np.newaxis]
 
-                q = -np.log(np.sum(np.exp(-c)))
-                m = q - c
+            B = -self.R[np.where(self.S)] -np.sum(D * np.log(D), axis = 2)
+            pseudo_inverse_D = np.linalg.pinv(D)
+            C = np.einsum('ijk,ik->ij', pseudo_inverse_D, B)
 
-                lmdp.R[state] = -q 
-                lmdp.P0[state, np.flatnonzero(cols_with_nonzero)] = np.exp(m)
+            Q = -np.log(np.sum(np.exp(-C), axis=1))
+            M = Q[:, np.newaxis] - C
+
+            lmdp.R[:self.n_nonterminal_states] = -Q
+            lmdp.P0[cols_with_nonzero] = np.exp(M).flatten()
         
-        embedding_rmse = np.mean(np.square(lmdp.Z_to_V(lmdp.power_iteration(lmbda)[0])[np.where(self.S)[0]] - V)/np.square(V))
-        return lmdp, embedding_rmse
+        embedding_mse = np.mean(np.square(lmdp.Z_to_V(lmdp.power_iteration(lmbda)[0]) - V))
+        return lmdp, embedding_mse
 
-#TODO:Adapt mingrid embeddings, adapt rest of the classes to S, optimize initialization and embedding from lmdp. Check deterministic embedding time
 class Minigrid_MDP(MDP):
 
     DIR_TO_VEC = [
