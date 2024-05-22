@@ -88,18 +88,18 @@ class MDP:
             K_min = 0
             K_max = 1
 
-            #lmdp.P0 = csr_matrix(lmdp.P0)
+            lmdp.P0 = csr_matrix(lmdp.P0)
 
             # Find the optimal K through ternary search
-            while K_max - K_min > 1e-3:
+            while K_max - K_min > 1e-10:
                 m1 = K_min + (K_max - K_min) / 3
                 lmdp.R = m1 * R
-                Z1, _ = lmdp.power_iteration(lmbda, epsilon=1e-2)
+                Z1, _ = lmdp.power_iteration(lmbda)
                 mse1 = np.mean(np.square(lmdp.Z_to_V(Z1) - V))
                 
                 m2 = K_max - (K_max - K_min) / 3
                 lmdp.R = m2 * R 
-                Z2, _ = lmdp.power_iteration(lmbda, epsilon=1e-2)
+                Z2, _ = lmdp.power_iteration(lmbda)
                 mse2 = np.mean(np.square(lmdp.Z_to_V(Z2) - V))
                 if mse1 > mse2:
                     K_min = m1

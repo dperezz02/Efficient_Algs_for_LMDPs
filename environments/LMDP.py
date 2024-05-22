@@ -30,22 +30,24 @@ class LMDP:
     def power_iteration(self, lmbda = 1, epsilon = 1e-10):
         """Power iteration algorithm to compute the optimal Z function."""
 
+        P0 = self.P0 if isspmatrix_csr(self.P0) else csr_matrix(self.P0)
         Z = np.ones(self.n_states)
         V_diff = np.arange(self.n_states)
         n_steps = 0
         
         nonterminal_states = np.where(self.S)[0]
-        G = np.diag(np.exp(self.R[nonterminal_states] / lmbda))
+        G = csr_matrix(np.diag(np.exp(self.R[nonterminal_states] / lmbda)))
         ZT = np.exp(self.R[np.where(self.S == 0)[0]] / lmbda)
 
         while max(V_diff) - min(V_diff) > epsilon:
-            TZ = G @ self.P0 @ Z
+            TZ = G @ P0 @ Z
             TZ = np.concatenate((TZ, ZT))
             V_diff = self.Z_to_V(TZ) - self.Z_to_V(Z)
             Z = TZ
             n_steps += 1
 
         return Z, n_steps
+    
     
     def compute_Pu(self, Z, sparse = True):
         if sparse:
@@ -95,12 +97,12 @@ class LMDP:
             mdp.P[source_states, a, rolled_indices] = Pu.data
 
         # Compute the embedding error
-        V_lmdp = self.Z_to_V(Z_opt)[np.where(self.S)[0]]
+        V_lmdp = self.Z_to_V(Z_opt)
         Q, _, _ = mdp.value_iteration(gamma=1)
-        V_mdp = Q.max(axis=1)[np.where(self.S)[0]]
-        embedding_rmse = np.mean(np.square(V_lmdp - V_mdp)/np.square(V_lmdp))
+        V_mdp = Q.max(axis=1)
+        embedding_mse = np.mean(np.square(V_lmdp - V_mdp))
 
-        return mdp, embedding_rmse
+        return mdp, embedding_mse
     
 class Minigrid(LMDP):
 

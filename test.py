@@ -11,8 +11,8 @@ import cProfile
 
 if __name__ == "__main__":
     
-    #TODO: Try to use csr matrix in power iteration, optimize deterministic MPD -> LMDP embedding and check and rethink terminal states indexing
-    grid_size = 20
+    #TODO: check mdp stochastic embedding optimization and rethink terminal states indexing
+    grid_size = 50
     walls = []#(14,1), (1,8), (5, 5), (12, 5), (8, 7), (2,5), (3,5), (4,5), (6,5), (7,5), (8,5), (9,5), (10,5), (11,5), (13,5), (15,9)]
     
     # MDP
@@ -33,9 +33,9 @@ if __name__ == "__main__":
     # minigrid_mdp_plots.plot_value_function(Q, print_values=True, file = "value_function.txt")
     # minigrid_mdp_plots.plot_path(opt_policy, path = 'plots\MDP_value_iteration_path.gif')
 
-    cProfile.run('minigrid_mdp.embedding_to_LMDP()', sort='tottime')
-    minigrid_lmdp, embedding_mse = minigrid_mdp.embedding_to_LMDP()
-    print("Embedding Mean Squared Error: ", embedding_mse)
+    
+    #minigrid_lmdp, embedding_mse = minigrid_mdp.embedding_to_LMDP()
+    #print("Embedding Mean Squared Error: ", embedding_mse)
 
     # Q-learning
     #print("Q-learning training...")
@@ -55,7 +55,7 @@ if __name__ == "__main__":
     # q_averaged_throughputs = plot_episode_throughput(throughputs, minigrid_mdp.shortest_path_length(opt_policy), plot_batch=True)
 
     # LMDP
-    #minigrid = Minigrid(grid_size=grid_size, walls=walls)
+    minigrid = Minigrid(grid_size=grid_size, walls=walls)
     # minigrid_plots = Minigrid_LMDP_Plotter(minigrid)
 
     # # Power Iteration LMDP
@@ -92,10 +92,9 @@ if __name__ == "__main__":
     # # z_averaged_throughputs = plot_episode_throughput(z_throughputs, minigrid_mdp.shortest_path_length(opt_policy), plot_batch=True)
 
     # Embedded MDP
-    #Benchmark time with profiler
-    
-    #cProfile.run('minigrid.embedding_to_MDP()', sort='tottime')
-    #mdp_minigrid, embedding_mse = minigrid.embedding_to_MDP()
+    cProfile.run('minigrid.embedding_to_MDP()', sort='tottime')
+    mdp_minigrid, embedding_mse = minigrid.embedding_to_MDP()
+    print("Embedding Mean Squared Error: ", embedding_mse)
     #print(mdp_minigrid.R)
     # minigrid_mdp_embedded_plots = Minigrid_MDP_Plotter(mdp_minigrid)
     # start_time = time.time()
