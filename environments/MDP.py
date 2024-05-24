@@ -10,10 +10,9 @@ class MDP:
         self.n_states = n_states
         self.n_nonterminal_states = n_states - n_terminal_states
         self.n_actions = n_actions
-        self.S = np.concatenate((np.ones(self.n_nonterminal_states, dtype=np.int8), np.zeros(n_terminal_states, dtype=np.int8)))
         self.P = np.zeros((self.n_nonterminal_states, n_actions, n_states))
-        self.R = np.zeros((n_states, n_actions))
-        self.s0 = 0 
+        self.R = np.zeros((n_states, n_actions)) # Assuming terminal states are at the end of the state space
+        self.s0 = 0
 
     def act(self, current_state, action):
         """Transition function."""
@@ -30,10 +29,9 @@ class MDP:
         V_diff = np.arange(self.n_states)
         n_steps = 0
 
-        nonterminal_states = np.where(self.S)[0]
-        R = self.R[nonterminal_states]
-        P = gamma * self.P[nonterminal_states]
-        QT = self.R[np.where(self.S == 0)[0]]
+        R = self.R[:self.n_nonterminal_states]
+        P = gamma * self.P
+        QT = self.R[self.n_nonterminal_states:]
 
         while max(V_diff) - min(V_diff) > epsilon:
             TQ = R + P @ Q.max(axis=1)
@@ -67,7 +65,6 @@ class MDP:
 
         # Create the LMDP
         lmdp = environments.lmdp.LMDP(self.n_states, self.n_states - self.n_nonterminal_states)
-        lmdp.S = self.S
         # Check if all actions from all states are deterministic. Otherwise, the stochastic LMDP embedding will perform better
         is_deterministic = (np.count_nonzero(self.P, axis=2) == np.ones((self.n_nonterminal_states, self.n_actions))).all()
 
@@ -83,7 +80,7 @@ class MDP:
             row_indices = np.repeat(np.arange(Pu.shape[0]), np.diff(Pu.indptr))
             log_ratio = np.log(Pu.data / lmdp.P0[row_indices, Pu.indices])
             product = Pu.data * log_ratio
-            R = np.sum(self.R, axis = 1)/self.n_actions + lmbda * np.concatenate((np.bincount(row_indices, weights=product), lmdp.R[np.where(lmdp.S == 0)[0]]))
+            R = np.sum(self.R, axis = 1)/self.n_actions + lmbda * np.concatenate((np.bincount(row_indices, weights=product), lmdp.R[self.n_nonterminal_states:]))
 
             K_min = 0
             K_max = 1
@@ -91,7 +88,7 @@ class MDP:
             lmdp.P0 = csr_matrix(lmdp.P0)
 
             # Find the optimal K through ternary search
-            while K_max - K_min > 1e-10:
+            while K_max - K_min > 1e-5:
                 m1 = K_min + (K_max - K_min) / 3
                 lmdp.R = m1 * R
                 Z1, _ = lmdp.power_iteration(lmbda)
@@ -152,9 +149,9 @@ class Minigrid_MDP(MDP):
         self.grid_size = grid_size
         self.n_orientations = 4
         self.actions = list(range(3))
-        self._create_environment(grid_size, walls)
+        n_states, n_terminal_states = self._create_environment(grid_size, walls)
 
-        super().__init__(n_states = len(self.states), n_terminal_states = np.count_nonzero(self.S == 0), n_actions = len(self.actions))
+        super().__init__(n_states = n_states, n_terminal_states = n_terminal_states, n_actions = len(self.actions))
         self.n_cells = int(self.n_states / self.n_orientations)
 
         if dynamics is None:
@@ -170,32 +167,37 @@ class Minigrid_MDP(MDP):
         self.env = OrderEnforcing(CustomEnv(size=grid_size+2, walls=walls, render_mode="rgb_array"))
         self.env.reset()
 
-        self.states = [
-            (x, y, o) for x in range(1, self.env.grid.height) for y in range(1, self.env.grid.width) for o in range(self.n_orientations)
-            if self._is_valid_position(x, y)
-        ]
+        nonterminal_states = []
+        terminal_states = []
+        for x in range(1, self.env.grid.height):
+            for y in range(1, self.env.grid.width):
+                if self._is_valid_position(x, y):
+                    for o in range(4):
+                        state = (x, y, o)
+                        if self._is_terminal(state):
+                            terminal_states.append(state)
+                        else:
+                            nonterminal_states.append(state)
+
+        self.states = nonterminal_states + terminal_states
         assert self.grid_size * self.grid_size - len(walls) == len(self.states) / self.n_orientations, "Invalid number of states"
         self.state_to_index = {state: index for index, state in enumerate(self.states)}
-        
-        # Keep track of terminal and non-terminal states
-        self.S = np.array([
-            0 if self._is_terminal(s) else 1 for s in range(len(self.states))
-        ])
+        return len(self.states), len(terminal_states)
 
     def _create_P(self):
         """Create the transition matrix for a deterministic MDP."""
 
-        for state in np.where(self.S)[0]:
+        for state in range(self.n_nonterminal_states):
             for action in self.actions:
                 next_state = self._state_step(self.states[state], action)
-                self.P[state][action] = np.array([1.0 if s == next_state else 0.0 for s in self.states])
+                self.P[state][action][self.state_to_index[next_state]] = 1.0
 
     def _reward_function(self, uniform_reward=True):
         """Create the reward function for a deterministic MDP.
         
         :uniform_reward: Whether all actions lead to the same reward or it depends on their next state."""
 
-        for state in np.where(self.S)[0]:
+        for state in range(self.n_nonterminal_states):
             for action in self.actions:
                 if uniform_reward:
                     self.R[state][action] = -1.0
@@ -213,10 +215,9 @@ class Minigrid_MDP(MDP):
             (self.env.grid.get(x, y) is None or self.env.grid.get(x, y).can_overlap())
         )
     
-    def _is_terminal(self, x: int) -> bool:
+    def _is_terminal(self, state: tuple[int, int, int]) -> bool:
         """Check if a state is terminal."""
-        
-        state = self.states[x]
+
         pos = self.env.grid.get(state[0], state[1])
         at_goal = pos is not None and pos.type == "goal"
         return at_goal
