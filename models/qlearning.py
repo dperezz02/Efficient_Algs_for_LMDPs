@@ -6,13 +6,13 @@ class QLearning:
 
     If learning_rate is None; alpha(x,a) = 1/max(1, N(s,a))**alpha
     """
-    def __init__(self, mdp, gamma=0.99, learning_rate=0.25, epsilon=1, epsilon_decay=0.9995,
-                 epsilon_min=0, c = 1, learning_rate_min = 0.0005, seed=42):
+    def __init__(self, mdp, gamma=0.99, epsilon=1, epsilon_decay=0.9995,
+                 epsilon_min=0, c = 1, seed=42):
         self.mdp = mdp
         self.gamma = gamma
-        self.learning_rate = learning_rate
         self.c = c
-        self.learning_rate_min = learning_rate_min
+        self.n_episodes = 0
+        self.learning_rate = 1
         self.epsilon = epsilon
         self.epsilon_decay = epsilon_decay
         self.epsilon_min = epsilon_min
@@ -60,14 +60,14 @@ class QLearning:
         self.state = next_state
 
         if self.episode_end:
+            self.n_episodes += 1
             self.epsilon = max(self.epsilon * self.epsilon_decay, self.epsilon_min)
-            self.learning_rate = max(self.learning_rate * self.learning_rate_decay, self.learning_rate_min)
+            self.learning_rate = self.c / (self.c + self.n_episodes)
             self.state = self.mdp.s0
 
 def Qlearning_training(qlearning, n_steps=int(5e5)):
     tt = 0
     l0 = 0
-    s0 = 0
     lengths = []
     throughputs = np.zeros(n_steps)
 
@@ -79,11 +79,9 @@ def Qlearning_training(qlearning, n_steps=int(5e5)):
         tt +=1
 
         if qlearning.episode_end:
-            lengths.append((tt-l0))#/opt_lengths[s0])
+            lengths.append((tt-l0))
             throughputs[l0:tt] = 1/(tt-l0)
-            #throughputs[l0:tt] = opt_lengths[s0]/(tt-l0)
             l0 = tt
-            s0 = qlearning.state
 
         if tt % 10000 == 0:
             print("Step: ", tt)

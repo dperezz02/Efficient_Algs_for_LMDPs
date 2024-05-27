@@ -19,7 +19,7 @@ class MDP:
 
         next_state = np.random.choice(self.n_states, p=self.P[current_state, action]) 
         reward = self.R[current_state, action]
-        terminal = self.S[next_state] == 0
+        terminal = next_state >= self.n_nonterminal_states
         return next_state, reward, terminal
     
     def value_iteration(self, epsilon=1e-10, gamma = 0.95):
