@@ -1,10 +1,10 @@
-from environments.mdp import Minigrid_MDP
-from environments.lmdp import Minigrid
+from frameworks.mdp import Minigrid_MDP
+from frameworks.lmdp import Minigrid
 import numpy as np
 import time
 from utils.plot import Plotter, Minigrid_MDP_Plotter
-from models.zlearning import ZLearning, Zlearning_training
-from models.qlearning import QLearning, Qlearning_training
+from algs.zlearning import ZLearning, Zlearning_training
+from algs.qlearning import QLearning, Qlearning_training
 from utils.lmdp_plot import Minigrid_LMDP_Plotter
 from scipy.sparse import csr_matrix
 

@@ -1,8 +1,8 @@
 import numpy as np
 import matplotlib.pyplot as plt
 from gym.wrappers import OrderEnforcing
-from environments.grid import CustomEnv
-import environments
+from frameworks.grid import CustomEnv
+import frameworks
 from scipy.sparse import csr_matrix, isspmatrix_csr
 
 class MDP:
@@ -64,7 +64,7 @@ class MDP:
         V = Q.max(axis=1)
 
         # Create the LMDP
-        lmdp = environments.lmdp.LMDP(self.n_states, self.n_states - self.n_nonterminal_states)
+        lmdp = frameworks.lmdp.LMDP(self.n_states, self.n_states - self.n_nonterminal_states)
         # Check if all actions from all states are deterministic. Otherwise, the stochastic LMDP embedding will perform better
         is_deterministic = (np.count_nonzero(self.P, axis=2) == np.ones((self.n_nonterminal_states, self.n_actions))).all()
 
@@ -85,7 +85,7 @@ class MDP:
             K_min = 0
             K_max = 1
 
-            lmdp.P0 = csr_matrix(lmdp.P0)
+            lmdp.P0 = csr_matrix(lmdp.P0) #TODO: check for simple grid 3x3 
 
             # Find the optimal K through ternary search
             while K_max - K_min > 1e-5:
@@ -107,28 +107,42 @@ class MDP:
 
         # Apply the non-deterministic LMDP embedding (from Todorov et al. 2009)
         else:
-
             epsilon = 1e-10
             D = self.P
-            # Find columns that contain any non-zero values and remove the rest
+            # Find columns that contain any non-zero values
             cols_with_nonzero = np.any(D != 0, axis=1)
-            D = np.array([D[i][:, cols_with_nonzero[i]] for i in range(D.shape[0])])
-            # Substitute 0s in those columns with 'epsilon' and renormalize
-            D = np.where(D == 0, epsilon, D)
-            D /= D.sum(axis=2)[:,:,np.newaxis]
+            unique_next_state_counts = np.unique(np.sum(cols_with_nonzero, axis=1))
 
-            B = -self.R[np.where(self.S)] -np.sum(D * np.log(D), axis = 2)
-            pseudo_inverse_D = np.linalg.pinv(D)
-            C = np.einsum('ijk,ik->ij', pseudo_inverse_D, B)
+            # Perform the vectorized embedding for each unique number of next states
+            for next_state_count in unique_next_state_counts:
 
-            Q = -np.log(np.sum(np.exp(-C), axis=1))
-            M = Q[:, np.newaxis] - C
+                source_states = np.where(np.sum(cols_with_nonzero, axis=1) == next_state_count)[0]
+                source_states_repeated = np.repeat(source_states, next_state_count)
+                next_states = np.where(cols_with_nonzero[source_states])[1]
 
-            lmdp.R[:self.n_nonterminal_states] = -Q
-            lmdp.P0[cols_with_nonzero] = np.exp(M).flatten()
+                # Remove the columns that contain only zeros and keep only possible transitions
+                D_count = np.array([D[i][:, cols_with_nonzero[i]] for i in source_states])
+
+                # Substitute 0s in actual possible transitions columns with 'epsilon' and renormalize
+                D_count[D_count == 0] = epsilon
+                D_count /= D_count.sum(axis=2, keepdims=True)
+
+                # Apply the Pseudo-Inverse method to both square and non-square matrices
+                B = -self.R[source_states] -np.sum(D_count * np.log(D_count), axis = 2)
+                pseudo_inverse_D = np.linalg.pinv(D_count)
+                C = np.einsum('ijk,ik->ij', pseudo_inverse_D, B)
+
+                Q = -np.log(np.sum(np.exp(-C), axis=1))
+                M = Q[:, np.newaxis] - C
+
+                # Assign the reward and initial state distribution to the LMDP in the corresponding states
+                lmdp.R[source_states] = -Q
+                lmdp.P0[source_states_repeated, next_states] = np.exp(M).flatten()
+
         
         embedding_mse = np.mean(np.square(lmdp.Z_to_V(lmdp.power_iteration(lmbda)[0]) - V))
         return lmdp, embedding_mse
+
 
 class Minigrid_MDP(MDP):
 
@@ -288,7 +302,7 @@ class Minigrid_MDP(MDP):
 
         lmdp, embedding_rmse = super().embedding_to_LMDP()
         dynamics = {'P0': lmdp.P0, 'R': lmdp.R}
-        lmdp_minigrid = environments.lmdp.Minigrid(self.grid_size, walls = self.env.walls, dynamics = dynamics)
+        lmdp_minigrid = frameworks.lmdp.Minigrid(self.grid_size, walls = self.env.walls, dynamics = dynamics)
         return lmdp_minigrid, embedding_rmse
 
     # Auxiliary Methods

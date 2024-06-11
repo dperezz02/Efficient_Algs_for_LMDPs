@@ -1,8 +1,8 @@
 import numpy as np
 import matplotlib.pyplot as plt
 from gym.wrappers import OrderEnforcing
-from environments.grid import CustomEnv
-from environments.mdp import MDP, Minigrid_MDP
+from frameworks.grid import CustomEnv
+from frameworks.mdp import MDP, Minigrid_MDP
 from scipy.sparse import csr_matrix, isspmatrix_csr
 
 
@@ -85,13 +85,18 @@ class LMDP:
         mdp.R = np.broadcast_to(mdp.R.reshape(-1, 1), (self.n_states, n_actions))
 
         # Compute the transition probabilities
-        nnz_per_row = np.diff(Pu.indptr)
-        source_states = np.repeat(np.arange(len(nnz_per_row)), nnz_per_row)
-        indices = Pu.indices.reshape(-1, 3)
+        n_next_states_per_row = np.diff(Pu.indptr)
+        n_next_states = np.unique(n_next_states_per_row)
 
-        for a in range(mdp.n_actions):
-            rolled_indices = np.roll(indices, -a, axis=1).flatten()
-            mdp.P[source_states, a, rolled_indices] = Pu.data
+        # Iterate through all possible transition dimensionalities to avoid heterogeneous matrices
+        for next_states in n_next_states:
+            source_states = np.where(n_next_states_per_row == next_states)[0]
+            source_states_repeated = np.repeat(source_states, next_states)
+            indices = Pu[source_states].indices.reshape(-1, next_states)
+
+            for a in range(mdp.n_actions):
+                rolled_indices = np.roll(indices, -a, axis=1).flatten()
+                mdp.P[source_states_repeated, a, rolled_indices] = Pu[source_states].data
 
         # Compute the embedding error
         V_lmdp = self.Z_to_V(Z_opt)
