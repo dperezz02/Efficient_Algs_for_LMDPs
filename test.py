@@ -11,8 +11,8 @@ import cProfile
 
 if __name__ == "__main__":
     
-    grid_size = 30
-    walls = [(14,1), (1,8), (5, 5), (12, 5), (8, 7), (2,5), (3,5), (4,5), (6,5), (7,5), (8,5), (9,5), (10,5), (11,5), (13,5), (15,9)]
+    grid_size = 5
+    walls = []#(14,1), (1,8), (5, 5), (12, 5), (8, 7), (2,5), (3,5), (4,5), (6,5), (7,5), (8,5), (9,5), (10,5), (11,5), (13,5), (15,9)]
     
     # MDP
     minigrid_mdp = Minigrid_MDP(grid_size=grid_size, walls = walls)
@@ -54,8 +54,8 @@ if __name__ == "__main__":
     # q_averaged_throughputs = plot_episode_throughput(throughputs, minigrid_mdp.shortest_path_length(opt_policy), plot_batch=True)
 
     # LMDP
-    minigrid = Minigrid(grid_size=grid_size, walls=walls)
-    minigrid_plots = Minigrid_LMDP_Plotter(minigrid)
+    # minigrid = Minigrid(grid_size=grid_size, walls=walls)
+    # minigrid_plots = Minigrid_LMDP_Plotter(minigrid)
 
     # # Power Iteration LMDP
     # lmbda = 1
@@ -105,29 +105,37 @@ if __name__ == "__main__":
     #print("Embedding Mean Squared Error: ", np.round(embedding_rmse*100,5), "%")
 
 
-    #cProfile.run('minigrid_mdp.embedding_to_LMDP()', sort='tottime')
-    #minigrid_lmdp, embedding_mse = minigrid_mdp.embedding_to_LMDP()
-    #print("Embedding Mean Squared Error: ", embedding_mse)
+    # mdp = Minigrid_MDP(grid_size=30, walls = walls)
+    # lmdp, embedding_mse = mdp.embedding_to_LMDP()
+    # print("Embedding Mean Squared Error: ", embedding_mse)
+    # lmdp2, embedding_mse = mdp.embedding_to_LMDP(binary=True)
+    # print("Embedding Mean Squared Error: ", embedding_mse)
+    # lmdp3, embedding_mse = mdp.embedding_to_LMDP(iterative=True)
+    # print("Embedding Mean Squared Error: ", embedding_mse)
+    # lmdp4, embedding_mse = mdp.embedding_to_LMDP(todorov=True)
+    # print("Embedding Mean Squared Error: ", embedding_mse)
 
+    grid_sizes = [2,3,5,10,15,20,30,40,50,60]
+    mses = [[],[],[]]#,[]]
+    for grid_size in grid_sizes:
+        print(grid_size)
+        mdp = Minigrid_MDP(grid_size=grid_size, walls = [])
+        _, embedding_mse = mdp.embedding_to_LMDP()
+        mses[0].append(embedding_mse)
+        print(embedding_mse)
+        # _, embedding_mse = mdp.embedding_to_LMDP(binary=True)
+        # mses[1].append(embedding_mse)
+        _, embedding_mse = mdp.embedding_to_LMDP(iterative=True)
+        mses[1].append(embedding_mse)
+        print(embedding_mse)
+        _, embedding_mse = mdp.embedding_to_LMDP(todorov=False)
+        mses[2].append(embedding_mse)
+    
+    minigrid_mdp_plots.plot_mse_vs_grid_size([16,36,100,400,900,1600,3600,6400,10000,14400], mses, ["TS", "SPA", "TE"], save_path = "plots/")
 
-    #mdp_minigrid, embedding_mse = minigrid.embedding_to_MDP()
-    #print("Embedding Mean Squared Error: ", embedding_mse)
-    start_time = time.time()
-    minigrid_lmdp1, embedding_mse = minigrid_mdp.embedding_to_LMDP()
-    print("Execution time: ", time.time() - start_time)
-    print("Embedding Mean Squared Error: ", embedding_mse)
-    minigrid_lmdp2, embedding_mse2 = minigrid_mdp.embedding_to_LMDP(binary=True)
-    print("Execution time: ", time.time() - start_time)
-    print("Embedding Mean Squared Error: ", embedding_mse2)
-    minigrid_lmdp3, embedding_mse3 = minigrid_mdp.embedding_to_LMDP(iterative=True)
-    print("Execution time: ", time.time() - start_time)
-    print("Embedding Mean Squared Error: ", embedding_mse3)
-    minigrid_lmdp4, embedding_mse4 = minigrid_mdp.embedding_to_LMDP(todorov=True)
-    print("Execution time: ", time.time() - start_time)
-    print("Embedding Mean Squared Error: ", embedding_mse4)
     
 
-    minigrid_plots.plot_embedding_error_scatter(minigrid_mdp, [minigrid_lmdp1, minigrid_lmdp2, minigrid_lmdp3, minigrid_lmdp4], ["TS", "BS", "SPA", "TE"], save_path = "plots\embedding_error_scatter.png")
+    #minigrid_mdp_plots.plot_embedding_error_scatter(mdp, [lmdp, lmdp2, lmdp3, lmdp4], ["TS","BS", "SPA", "TE"], save_path = "plots\embedding_error_scatter.png")
 
     # #print(minigrid_lmdp.R)
     # #print(minigrid_lmdp.P0)

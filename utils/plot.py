@@ -87,11 +87,38 @@ class Plotter:
 
         plt.suptitle('Comparison of Embedding Approaches', fontsize=16)
         plt.tight_layout(rect=[0, 0.03, 1, 0.95])
+
+        plt.subplots_adjust(hspace=0.3)
         
         plt.savefig(save_path + 'embedding_error.png')
         plt.show()
         plt.clf()
 
+    def plot_mse_vs_grid_size(self, n_states, mse_values, names, save_path = 'plots/'):
+        df = pd.DataFrame()
+        for mse, name in zip(mse_values, names):
+            temp_df = pd.DataFrame({'Number of States': n_states, 'MSE': mse, 'Method': name})
+            df = pd.concat([df, temp_df], ignore_index=True)
+        
+        plt.figure(figsize=(8, 6))
+        ax = sns.lineplot(data=df, x='Number of States', y='MSE', hue='Method', style='Method', markers=True, dashes=False)
+
+        plt.xlabel('Number of States', fontsize=14)
+        plt.ylabel('Mean Squared Error (MSE)', fontsize=14)
+        #plt.yscale('log')  # Use logarithmic scale for y-axis
+        plt.title('MSE vs. Number of States for Embedding Approaches', fontsize=16)
+        plt.grid(True, which="both", ls="--", linewidth=0.5)
+
+        # Customize legend
+        legend = plt.legend(loc='upper right', fontsize=12)
+        legend.get_frame().set_edgecolor('black')  
+        
+        
+
+        plt.tight_layout()
+        plt.savefig(save_path + 'mse_vs_n_states2.png')
+        plt.show()
+        plt.clf()
 
     def plot_episode_length(self, lengths, opt_length, plot_batch=False, batch_size=50):
         print("Number of episodes: ", len(lengths))

@@ -102,7 +102,7 @@ class MDP:
                 lmdp.P0 = np.sum(self.P, axis = 1)/self.n_actions
                 Z, _ = lmdp.power_iteration(lmbda)
                 i=0
-                while np.mean(np.square(lmdp.Z_to_V(Z) - V))/np.mean(np.square(V)) > 0.1 and i < 50:
+                while np.mean(np.square(lmdp.Z_to_V(Z) - V))/np.mean(np.square(V)) > 0.1 and i < 1:
                     Pu = lmdp.compute_Pu(Z)
                     row_indices = np.repeat(np.arange(Pu.shape[0]), np.diff(Pu.indptr))
                     log_ratio = np.log(Pu.data / lmdp.P0[row_indices, Pu.indices])
@@ -150,7 +150,7 @@ class MDP:
                 lmdp.P0 = csr_matrix(lmdp.P0) #TODO: check for simple grid 3x3 
 
                 #Find the optimal K through ternary search
-                while K_max - K_min > 1e-5:
+                while K_max - K_min > 1e-10:
                     m1 = K_min + (K_max - K_min) / 3
                     lmdp.R = m1 * R
                     Z1, _ = lmdp.power_iteration(lmbda)
@@ -166,7 +166,6 @@ class MDP:
                         K_max = m2
 
                 lmdp.R = K_min * R
-
 
         # Apply the non-deterministic LMDP embedding (from Todorov et al. 2009)
         else:
@@ -277,7 +276,7 @@ class Minigrid_MDP(MDP):
         for state in range(self.n_nonterminal_states):
             for action in self.actions:
                 if uniform_reward:
-                    self.R[state][action] = -2.0
+                    self.R[state][action] = -1.0
                 else:
                     next_state = self._state_step(self.states[state], action)
                     pos = self.env.grid.get(next_state[0], next_state[1])

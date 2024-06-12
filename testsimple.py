@@ -4,9 +4,9 @@ import numpy as np
 import time
 
 if __name__ == "__main__":
-    grid_size = 35
+    grid_size = 5
 
-    g = SimpleGrid(grid_size)
+    #g = SimpleGrid(grid_size)
     # Z, nsteps = g.power_iteration(1, 1e-10)
     # #print(Z)
     # #print(g.Z_to_V(Z))
@@ -41,24 +41,35 @@ if __name__ == "__main__":
     mdp = SimpleGrid_MDP(grid_size)
     minigrid_mdp_plots = Minigrid_MDP_Plotter(mdp)
     
-    start_time = time.time()
-    minigrid_lmdp1, embedding_mse = mdp.embedding_to_LMDP()
-    print("Execution time: ", time.time() - start_time)
-    print("Embedding Mean Squared Error: ", embedding_mse)
-    minigrid_lmdp2, embedding_mse2 = mdp.embedding_to_LMDP(binary=True)
-    print("Execution time: ", time.time() - start_time)
-    print("Embedding Mean Squared Error: ", embedding_mse2)
-    minigrid_lmdp3, embedding_mse3 = mdp.embedding_to_LMDP(iterative=True)
-    print("Execution time: ", time.time() - start_time)
-    print("Embedding Mean Squared Error: ", embedding_mse3)
-    minigrid_lmdp4, embedding_mse4 = mdp.embedding_to_LMDP(todorov=True)
-    print("Execution time: ", time.time() - start_time)
-    print("Embedding Mean Squared Error: ", embedding_mse4)
+    # start_time = time.time()
+    # minigrid_lmdp1, embedding_mse = mdp.embedding_to_LMDP()
+    # print("Execution time: ", time.time() - start_time)
+    # print("Embedding Mean Squared Error: ", embedding_mse)
+    # start_time = time.time()
+    # minigrid_lmdp4, embedding_mse4 = mdp.embedding_to_LMDP(todorov=True)
+    # print("Execution time: ", time.time() - start_time)
+    # print("Embedding Mean Squared Error: ", embedding_mse4)
     
 
-    minigrid_mdp_plots.plot_embedding_error_scatter(mdp, [minigrid_lmdp1, minigrid_lmdp2, minigrid_lmdp3, minigrid_lmdp4], ["TS", "BS", "SPA", "TE"], save_path = "plots\embedding_error_scatter_simple.png")
+    # minigrid_mdp_plots.plot_embedding_error_scatter(mdp, [minigrid_lmdp1, minigrid_lmdp4], ["TS", "TE"], save_path = "plots\embedding_error_scatter_simple.png")
 
-
+    grid_sizes = [2,3,5,10,15,20,30,40,50]
+    mses = [[],[],[]]#,[]]
+    for grid_size in grid_sizes:
+        print(grid_size)
+        mdp = SimpleGrid_MDP(grid_size)
+        _, embedding_mse = mdp.embedding_to_LMDP()
+        mses[0].append(embedding_mse)
+        print(embedding_mse)
+        # _, embedding_mse = mdp.embedding_to_LMDP(binary=True)
+        # mses[1].append(embedding_mse)
+        _, embedding_mse = mdp.embedding_to_LMDP(iterative=True)
+        mses[1].append(embedding_mse)
+        print(embedding_mse)
+        # _, embedding_mse = mdp.embedding_to_LMDP(todorov=True)
+        # mses[2].append(embedding_mse)
+    
+    minigrid_mdp_plots.plot_mse_vs_grid_size([4,9,25,100,225,400,900,1600,2500], mses, ["TS", "TSA"], save_path = "plots/")
     # lmdp, embedding_mse = mdp.embedding_to_LMDP()
     # print("Total embedding error (Deterministic MDP -> LMDP): ", embedding_mse)
     #print(lmdp.R)
