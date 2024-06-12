@@ -6,6 +6,8 @@ import seaborn as sns
 import pandas as pd
 import matplotlib as mpl
 import pandas as pd
+import math
+from sklearn.metrics import r2_score
 
 class Plotter:
     def __init__(self):
@@ -39,6 +41,54 @@ class Plotter:
         plt.title("Episodic Throughput in Minigrid " + str(grid_size) + "x"+ str(grid_size) + "Walls")
         plt.tight_layout()
         plt.savefig(save_path + str(grid_size) + 'throughputs.png')
+        plt.show()
+        plt.clf()
+
+    def plot_embedding_error_scatter(self, mdp, embedded_lmdps, embedding_names, gamma = 1, lmbda = 1, save_path = 'plots\''):
+        mdp_V = mdp.value_iteration(gamma=gamma)[0].max(axis=1)[:mdp.n_nonterminal_states]
+
+        num_lmdps = len(embedded_lmdps)
+        cols = 2 if num_lmdps > 3 else min(num_lmdps, 3)  # 2 columns if more than 3, else max 3 columns
+        rows = math.ceil(num_lmdps / cols)
+
+        colors = sns.color_palette("tab10", num_lmdps * 2)[:num_lmdps]
+
+        fig, axs = plt.subplots(rows, cols, figsize=(6*cols, 6*rows), sharey=False)
+        axs = axs.flatten() if num_lmdps > 1 else [axs]
+
+        for i, (embedded_lmdp, color, name) in enumerate(zip(embedded_lmdps, colors, embedding_names)):
+            lmdp_V = embedded_lmdp.Z_to_V(embedded_lmdp.power_iteration(lmbda=lmbda)[0])[:embedded_lmdp.n_nonterminal_states]
+            r_squared = r2_score(mdp_V, lmdp_V)
+            sns.scatterplot(x=mdp_V, y=lmdp_V, ax=axs[i], label=name, alpha=0.7, s=20, color=color, edgecolor='black')
+            axs[i].set_title(chr(65 + i), fontsize=20, loc='left') 
+            if (i // cols) == (rows - 1):  # Only set x labels for the bottom row
+                axs[i].set_xlabel('Value in traditional MDP', fontsize=12)
+            if i % cols == 0:
+                axs[i].set_ylabel('Value in LMDP', fontsize=12)
+            axs[i].grid(False)
+            axs[i].text(0.05, 0.95, f'$R^2 = {r_squared:.4f}$', transform=axs[i].transAxes, fontsize=12, verticalalignment='top')
+
+            # Add diagonal line
+            min_val = min(min(mdp_V), min(lmdp_V))
+            max_val = max(max(mdp_V), max(lmdp_V))
+            axs[i].plot([min_val, max_val], [min_val, max_val], 'k-', linewidth=0.5)
+
+        for j in range(i+1, len(axs)):
+            fig.delaxes(axs[j])
+
+        handles, labels = [], []
+        for ax in axs:
+            for handle, label in zip(*ax.get_legend_handles_labels()):
+                if label not in labels:
+                    handles.append(handle)
+                    labels.append(label)
+            ax.legend().set_visible(False)
+        fig.legend(handles, labels, loc='upper right', ncol=cols, fontsize=12).get_frame().set_edgecolor('black')
+
+        plt.suptitle('Comparison of Embedding Approaches', fontsize=16)
+        plt.tight_layout(rect=[0, 0.03, 1, 0.95])
+        
+        plt.savefig(save_path + 'embedding_error.png')
         plt.show()
         plt.clf()
 

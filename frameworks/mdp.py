@@ -56,7 +56,7 @@ class MDP:
             n_steps += 1
         return n_steps
 
-    def embedding_to_LMDP(self, lmbda = 1):
+    def embedding_to_LMDP(self, lmbda = 1, binary=False, iterative=False, todorov=False):
         """Embed the MDP into an LMDP."""
 
         # Compute the value function of the original MDP without discounting
@@ -82,28 +82,91 @@ class MDP:
             product = Pu.data * log_ratio
             R = np.sum(self.R, axis = 1)/self.n_actions + lmbda * np.concatenate((np.bincount(row_indices, weights=product), lmdp.R[self.n_nonterminal_states:]))
 
+
             K_min = 0
             K_max = 1
 
-            lmdp.P0 = csr_matrix(lmdp.P0) #TODO: check for simple grid 3x3 
+            if binary:
 
-            # Find the optimal K through ternary search
-            while K_max - K_min > 1e-5:
-                m1 = K_min + (K_max - K_min) / 3
-                lmdp.R = m1 * R
-                Z1, _ = lmdp.power_iteration(lmbda)
-                mse1 = np.mean(np.square(lmdp.Z_to_V(Z1) - V))
-                
-                m2 = K_max - (K_max - K_min) / 3
-                lmdp.R = m2 * R 
-                Z2, _ = lmdp.power_iteration(lmbda)
-                mse2 = np.mean(np.square(lmdp.Z_to_V(Z2) - V))
-                if mse1 > mse2:
-                    K_min = m1
-                else:
-                    K_max = m2
+                while K_max - K_min > 1e-5:
+                    K = (K_min + K_max)/2
+                    lmdp.R = K * R
+                    Z_new, _ = lmdp.power_iteration(lmbda)
+                    if np.mean(np.square(lmdp.Z_to_V(Z_new))) < np.mean(np.square(V)):
+                        K_min = K
+                    else:
+                        K_max = K
 
-            lmdp.R = K_min * R
+            elif iterative:
+                lmdp.R = np.sum(self.R, axis = 1)/self.n_actions
+                lmdp.P0 = np.sum(self.P, axis = 1)/self.n_actions
+                Z, _ = lmdp.power_iteration(lmbda)
+                i=0
+                while np.mean(np.square(lmdp.Z_to_V(Z) - V))/np.mean(np.square(V)) > 0.1 and i < 50:
+                    Pu = lmdp.compute_Pu(Z)
+                    row_indices = np.repeat(np.arange(Pu.shape[0]), np.diff(Pu.indptr))
+                    log_ratio = np.log(Pu.data / lmdp.P0[row_indices, Pu.indices])
+                    product = Pu.data * log_ratio
+
+                    lmdp.R = np.sum(self.R, axis = 1)/self.n_actions + lmbda * np.concatenate((np.bincount(row_indices, weights=product), lmdp.R[self.n_nonterminal_states:]))
+                    i+=1
+            
+            elif todorov:
+
+                epsilon = 1e-10
+                D = self.P
+                # Find columns that contain any non-zero values
+                cols_with_nonzero = np.any(D != 0, axis=1)
+                unique_next_state_counts = np.unique(np.sum(cols_with_nonzero, axis=1))
+
+                # Perform the vectorized embedding for each unique number of next states
+                for next_state_count in unique_next_state_counts:
+
+                    source_states = np.where(np.sum(cols_with_nonzero, axis=1) == next_state_count)[0]
+                    source_states_repeated = np.repeat(source_states, next_state_count)
+                    next_states = np.where(cols_with_nonzero[source_states])[1]
+
+                    # Remove the columns that contain only zeros and keep only possible transitions
+                    D_count = np.array([D[i][:, cols_with_nonzero[i]] for i in source_states])
+
+                    # Substitute 0s in actual possible transitions columns with 'epsilon' and renormalize
+                    D_count[D_count == 0] = epsilon
+                    D_count /= D_count.sum(axis=2, keepdims=True)
+
+                    # Apply the Pseudo-Inverse method to both square and non-square matrices
+                    B = -self.R[source_states] -np.sum(D_count * np.log(D_count), axis = 2)
+                    pseudo_inverse_D = np.linalg.pinv(D_count)
+                    C = np.einsum('ijk,ik->ij', pseudo_inverse_D, B)
+
+                    R = np.log(np.sum(np.exp(-C), axis=1)) 
+                    M = - R[:, np.newaxis] - C
+
+                    # Assign the reward and initial state distribution to the LMDP in the corresponding states
+                    lmdp.R[source_states] = R
+                    lmdp.P0[source_states_repeated, next_states] = np.exp(M).flatten()
+            
+            else:
+
+                lmdp.P0 = csr_matrix(lmdp.P0) #TODO: check for simple grid 3x3 
+
+                #Find the optimal K through ternary search
+                while K_max - K_min > 1e-5:
+                    m1 = K_min + (K_max - K_min) / 3
+                    lmdp.R = m1 * R
+                    Z1, _ = lmdp.power_iteration(lmbda)
+                    mse1 = np.mean(np.square(lmdp.Z_to_V(Z1) - V))
+                    
+                    m2 = K_max - (K_max - K_min) / 3
+                    lmdp.R = m2 * R 
+                    Z2, _ = lmdp.power_iteration(lmbda)
+                    mse2 = np.mean(np.square(lmdp.Z_to_V(Z2) - V))
+                    if mse1 > mse2:
+                        K_min = m1
+                    else:
+                        K_max = m2
+
+                lmdp.R = K_min * R
+
 
         # Apply the non-deterministic LMDP embedding (from Todorov et al. 2009)
         else:
@@ -132,11 +195,11 @@ class MDP:
                 pseudo_inverse_D = np.linalg.pinv(D_count)
                 C = np.einsum('ijk,ik->ij', pseudo_inverse_D, B)
 
-                Q = -np.log(np.sum(np.exp(-C), axis=1))
-                M = Q[:, np.newaxis] - C
+                R = np.log(np.sum(np.exp(-C), axis=1))
+                M = - R[:, np.newaxis] - C
 
                 # Assign the reward and initial state distribution to the LMDP in the corresponding states
-                lmdp.R[source_states] = -Q
+                lmdp.R[source_states] = R
                 lmdp.P0[source_states_repeated, next_states] = np.exp(M).flatten()
 
         
@@ -214,7 +277,7 @@ class Minigrid_MDP(MDP):
         for state in range(self.n_nonterminal_states):
             for action in self.actions:
                 if uniform_reward:
-                    self.R[state][action] = -1.0
+                    self.R[state][action] = -2.0
                 else:
                     next_state = self._state_step(self.states[state], action)
                     pos = self.env.grid.get(next_state[0], next_state[1])
@@ -297,10 +360,10 @@ class Minigrid_MDP(MDP):
         plt.imshow(image)
         plt.show()
     
-    def embedding_to_LMDP(self):
+    def embedding_to_LMDP(self, binary=False, iterative=False, todorov=False):
         """Embed the Minigrid MDP into a Minigrid LMDP."""
 
-        lmdp, embedding_rmse = super().embedding_to_LMDP()
+        lmdp, embedding_rmse = super().embedding_to_LMDP(binary=binary, iterative=iterative, todorov=todorov)
         dynamics = {'P0': lmdp.P0, 'R': lmdp.R}
         lmdp_minigrid = frameworks.lmdp.Minigrid(self.grid_size, walls = self.env.walls, dynamics = dynamics)
         return lmdp_minigrid, embedding_rmse

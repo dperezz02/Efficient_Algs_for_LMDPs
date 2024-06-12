@@ -1,11 +1,12 @@
 from frameworks.simplegrid import SimpleGrid, SimpleGrid_MDP
+from utils.plot import Plotter, Minigrid_MDP_Plotter
 import numpy as np
 import time
 
 if __name__ == "__main__":
-    #grid_size = 2
+    grid_size = 35
 
-    # g = SimpleGrid(grid_size)
+    g = SimpleGrid(grid_size)
     # Z, nsteps = g.power_iteration(1, 1e-10)
     # #print(Z)
     # #print(g.Z_to_V(Z))
@@ -37,16 +38,30 @@ if __name__ == "__main__":
     # #print(Q.max(axis=1))
     # print("Total embedding error (LMDP -> MDP): ", np.sum(np.abs(lmdp2.Z_to_V(Z) - Q.max(axis=1))))
 
-    # mdp = SimpleGrid_MDP(grid_size)
-    # #print(mdp.P, mdp.R)
-    # #Q, pi, n = mdp.value_iteration(1e-10, 1)
-    # #print(Q.max(axis=1))
+    mdp = SimpleGrid_MDP(grid_size)
+    minigrid_mdp_plots = Minigrid_MDP_Plotter(mdp)
+    
+    start_time = time.time()
+    minigrid_lmdp1, embedding_mse = mdp.embedding_to_LMDP()
+    print("Execution time: ", time.time() - start_time)
+    print("Embedding Mean Squared Error: ", embedding_mse)
+    minigrid_lmdp2, embedding_mse2 = mdp.embedding_to_LMDP(binary=True)
+    print("Execution time: ", time.time() - start_time)
+    print("Embedding Mean Squared Error: ", embedding_mse2)
+    minigrid_lmdp3, embedding_mse3 = mdp.embedding_to_LMDP(iterative=True)
+    print("Execution time: ", time.time() - start_time)
+    print("Embedding Mean Squared Error: ", embedding_mse3)
+    minigrid_lmdp4, embedding_mse4 = mdp.embedding_to_LMDP(todorov=True)
+    print("Execution time: ", time.time() - start_time)
+    print("Embedding Mean Squared Error: ", embedding_mse4)
+    
+
+    minigrid_mdp_plots.plot_embedding_error_scatter(mdp, [minigrid_lmdp1, minigrid_lmdp2, minigrid_lmdp3, minigrid_lmdp4], ["TS", "BS", "SPA", "TE"], save_path = "plots\embedding_error_scatter_simple.png")
+
 
     # lmdp, embedding_mse = mdp.embedding_to_LMDP()
-    # #Z, nsteps = lmdp.power_iteration(1, 1e-10)
-    # #print(lmdp.Z_to_V(Z))
     # print("Total embedding error (Deterministic MDP -> LMDP): ", embedding_mse)
-    # #print(lmdp.R)+
+    #print(lmdp.R)
     
     
     # mdp_minigrid2, embedding_mse = g.embedding_to_MDP()
@@ -54,14 +69,14 @@ if __name__ == "__main__":
     # mdp2 = lmdp.embedding_to_MDP()
     # Q, pi, n = mdp2.value_iteration(1e-10, 1)
     # print(Q.max(axis=1))
-    #print(mdp_minigrid2.P)
+    # print(mdp_minigrid2.P)
 
     #Use a prophiler
     # import cProfile
     # g = SimpleGrid(100)
     # mdp_g, _ = g.embedding_to_MDP()
-    # cProfile.run('mdp_g.embedding_to_LMDP()', sort='tottime')
-    # cProfile.run('mdp_g.embedding_to_LMDP_loop()', sort='tottime')
+    # lmdp_g, mse = mdp_g.embedding_to_LMDP()
+    # print("Embedding Mean Squared Error: ", mse)
     
 
 
@@ -80,13 +95,3 @@ if __name__ == "__main__":
     #         mdp_g.embedding_to_LMDP_loop()
     #     end_time = time.time()
     #     print("Execution time for loop embedding in grid size", grid_size, ": ", (end_time - start_time) / 10)
-
-
-    g = SimpleGrid(2)
-    mdp_g, _ = g.embedding_to_MDP()
-    lmdp1, error = mdp_g.embedding_to_LMDP()
-    lmdp2,  error2 = mdp_g.embedding_to_LMDP_loop()
-    print(lmdp1.P0 -lmdp2.P0)
-    print(lmdp1.R- lmdp2.R)
-    print("Error vectorized: ", error)
-    print("Error loop: ", error2)

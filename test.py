@@ -11,8 +11,8 @@ import cProfile
 
 if __name__ == "__main__":
     
-    grid_size = 40
-    walls = []#(14,1), (1,8), (5, 5), (12, 5), (8, 7), (2,5), (3,5), (4,5), (6,5), (7,5), (8,5), (9,5), (10,5), (11,5), (13,5), (15,9)]
+    grid_size = 30
+    walls = [(14,1), (1,8), (5, 5), (12, 5), (8, 7), (2,5), (3,5), (4,5), (6,5), (7,5), (8,5), (9,5), (10,5), (11,5), (13,5), (15,9)]
     
     # MDP
     minigrid_mdp = Minigrid_MDP(grid_size=grid_size, walls = walls)
@@ -55,7 +55,7 @@ if __name__ == "__main__":
 
     # LMDP
     minigrid = Minigrid(grid_size=grid_size, walls=walls)
-    # minigrid_plots = Minigrid_LMDP_Plotter(minigrid)
+    minigrid_plots = Minigrid_LMDP_Plotter(minigrid)
 
     # # Power Iteration LMDP
     # lmbda = 1
@@ -110,17 +110,25 @@ if __name__ == "__main__":
     #print("Embedding Mean Squared Error: ", embedding_mse)
 
 
-    mdp_minigrid, embedding_mse = minigrid.embedding_to_MDP()
+    #mdp_minigrid, embedding_mse = minigrid.embedding_to_MDP()
     #print("Embedding Mean Squared Error: ", embedding_mse)
     start_time = time.time()
-    minigrid_lmdp, embedding_mse = mdp_minigrid.embedding_to_LMDP()
+    minigrid_lmdp1, embedding_mse = minigrid_mdp.embedding_to_LMDP()
     print("Execution time: ", time.time() - start_time)
     print("Embedding Mean Squared Error: ", embedding_mse)
+    minigrid_lmdp2, embedding_mse2 = minigrid_mdp.embedding_to_LMDP(binary=True)
+    print("Execution time: ", time.time() - start_time)
+    print("Embedding Mean Squared Error: ", embedding_mse2)
+    minigrid_lmdp3, embedding_mse3 = minigrid_mdp.embedding_to_LMDP(iterative=True)
+    print("Execution time: ", time.time() - start_time)
+    print("Embedding Mean Squared Error: ", embedding_mse3)
+    minigrid_lmdp4, embedding_mse4 = minigrid_mdp.embedding_to_LMDP(todorov=True)
+    print("Execution time: ", time.time() - start_time)
+    print("Embedding Mean Squared Error: ", embedding_mse4)
+    
 
-    start_time = time.time()
-    minigrid_lmdp, embedding_mse = mdp_minigrid.embedding_to_LMDP_loop()
-    print("Loop Execution time: ", time.time() - start_time)
-    print("Loop Embedding Mean Squared Error: ", embedding_mse)
+    minigrid_plots.plot_embedding_error_scatter(minigrid_mdp, [minigrid_lmdp1, minigrid_lmdp2, minigrid_lmdp3, minigrid_lmdp4], ["TS", "BS", "SPA", "TE"], save_path = "plots\embedding_error_scatter.png")
+
     # #print(minigrid_lmdp.R)
     # #print(minigrid_lmdp.P0)
     # Z, n_steps = minigrid_lmdp.power_iteration(lmbda = lmbda, epsilon=epsilon)
