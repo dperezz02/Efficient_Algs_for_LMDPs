@@ -1,6 +1,6 @@
 from minigrid.core.grid import Grid
 from minigrid.core.mission import MissionSpace
-from minigrid.core.world_object import Goal, Wall
+from minigrid.core.world_object import Goal, Wall, Lava
 from minigrid.minigrid_env import MiniGridEnv
 
 
@@ -35,6 +35,7 @@ class CustomEnv(MiniGridEnv):
         self,
         size=8,
         walls = [],
+        lavas = [],
         agent_start_pos=(1, 1),
         agent_start_dir=0,
         max_steps: int | None = None,
@@ -43,6 +44,7 @@ class CustomEnv(MiniGridEnv):
         self.agent_start_pos = agent_start_pos
         self.agent_start_dir = agent_start_dir
         self.walls = walls
+        self.lavas = lavas
 
         if max_steps is None:
             max_steps = 4 * size**2
@@ -69,7 +71,20 @@ class CustomEnv(MiniGridEnv):
 
         # Generate the walls in the middle
         for x, y in self.walls:
-            self.grid.set(x, y, Wall())
+
+            # Check if x,y is within the grid and is empty
+            if x < width and y < height and self.grid.get(x, y) is None:
+                self.grid.set(x, y, Wall())
+            else:
+                print("Wall position is out of bounds or is not empty")
+        
+        for x, y in self.lavas:
+            
+            # Check if x,y is within the grid and is empty
+            if x < width and y < height and self.grid.get(x, y) is None:
+                self.grid.set(x, y, Lava())
+            else:
+                print("Wall position is out of bounds or is not empty")
 
         # Place a goal square in the bottom-right corner
         self.put_obj(Goal(), width - 2, height - 2)

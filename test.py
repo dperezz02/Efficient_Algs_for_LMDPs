@@ -14,28 +14,22 @@ if __name__ == "__main__":
     
     grid_size = 15
     walls = [(14,1), (1,8), (5, 5), (12, 5), (8, 7), (2,5), (3,5), (4,5), (6,5), (7,5), (8,5), (9,5), (10,5), (11,5), (13,5), (15,9)]
-    
+    lavas = [(7,1), (1,4), (14,14)]
+
+
     # MDP
-    minigrid_mdp = Minigrid_MDP(grid_size=grid_size, walls = walls)
+    minigrid_mdp = Minigrid_MDP(grid_size=grid_size, walls = walls, lavas=lavas)
     minigrid_mdp_plots = Minigrid_MDP_Plotter(minigrid_mdp)
+    #minigrid_mdp.render()
+    print(minigrid_mdp.n_nonterminal_states)
+    print(minigrid_mdp.R[minigrid_mdp.state_to_index[(1,4,0)]])
+    Q, opt_policy, n_steps = minigrid_mdp.value_iteration(epsilon=1e-10, gamma=0.95)
+    minigrid_mdp_plots.plot_path(opt_policy, path = 'plots\MDP_value_iteration_path.gif')
 
     gamma = 1
     epsilon = 1e-10
     n_iters = int(1e6)
     lmbda = 1
-
-    grid_sizes = [2,3,5,10,15,20,30,40,50,60,70,80,90,100]
-    for grid_size in grid_sizes:
-        mdp = Minigrid_MDP(grid_size=grid_size, walls = [])
-        start_time = time.time()
-        for i in range(5):
-            Q, _, _ = mdp.value_iteration(epsilon, gamma)
-        print("Value iteration took: ", (time.time() - start_time)/5, " seconds for grid size: ", grid_size)
-        start_time = time.time()
-        for i in range(1):
-            Q2, _, _ = mdp.value_iteration_loop(epsilon, gamma)
-        print("Value iteration Loop took: ", (time.time() - start_time)/1, " seconds for grid size: ", grid_size)
-        print("Total Absolute Error: ", np.sum(np.abs(Q-Q2)))
 
 
     # Value Iteration MDP
@@ -44,7 +38,7 @@ if __name__ == "__main__":
     # print("Value iteration took: ", n_steps, " steps before converging with epsilon:", epsilon)
     # opt_lengths = list(minigrid_mdp.shortest_path_length(opt_policy, s) for s in range(minigrid_mdp.n_states))
     # plot_greedy_policy(opt_policy, minigrid_mdp, print_policy=True)
-    # minigrid_mdp_plots.plot_value_function(Q, print_values=True, file = "value_function.txt")
+    minigrid_mdp_plots.plot_value_function(Q, print_values=True, file = "value_function.txt")
     # minigrid_mdp_plots.plot_path(opt_policy, path = 'plots\MDP_value_iteration_path.gif')
 
     

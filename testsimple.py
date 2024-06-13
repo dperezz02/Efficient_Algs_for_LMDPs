@@ -41,18 +41,6 @@ if __name__ == "__main__":
     # mdp = SimpleGrid_MDP(grid_size)
     # minigrid_mdp_plots = Minigrid_MDP_Plotter(mdp)
 
-    grid_sizes = [60,70,80,90,100]#2,3,5,10,15,20,30,40,50,
-    for grid_size in grid_sizes:
-        g = SimpleGrid(grid_size)
-        start_time = time.time()
-        for i in range(5):
-            _, _ = g.power_iteration(1, 1e-10)
-        print("Power iteration took: ", (time.time() - start_time)/5, " seconds for grid size: ", grid_size)
-        start_time = time.time()
-        for i in range(1):
-            _, _ = g.power_iteration(1, 1e-10, sparse=False)
-        print("Value iteration Loop took: ", (time.time() - start_time)/1, " seconds for grid size: ", grid_size)
-
     # mdp_minigrid2, embedding_mse = g.embedding_to_MDP()
     # print("Total embedding error (LMDP -> MDP): ", embedding_mse)
     # mdp2 = lmdp.embedding_to_MDP()

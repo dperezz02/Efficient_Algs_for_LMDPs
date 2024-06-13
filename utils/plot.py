@@ -241,7 +241,7 @@ class Minigrid_MDP_Plotter(Plotter):
         plt.xticks(range(self.minigrid.n_orientations), x_labels)
         plt.show()   
 
-    def plot_value_function(self, Q, print_values=False, file = "value_function.txt"):
+    def plot_value_function(self, Q, print_values=False, plot_values=False, file = "value_function.txt"):
         V = Q.max(axis=1)
         if print_values: 
             with open(file, "w") as f:
@@ -249,18 +249,20 @@ class Minigrid_MDP_Plotter(Plotter):
                     f.write("V({}): {}\n".format(self.minigrid.states[s], V[s]))
                     f.write("Q({}): {}\n".format(self.minigrid.states[s], Q[s]))
 
-        plt.figure(figsize=(5, 2*self.minigrid.grid_size))
-        im = plt.imshow(V.reshape((self.minigrid.n_cells,4)), vmin= V.min(), vmax=V.max())
-        colorbar_ticks = np.linspace(V.max(), V.min(), 10)
-        plt.colorbar(im, ticks=colorbar_ticks) 
-        plt.title("V(s)")
-        plt.xlabel("Orientation")
-        plt.ylabel("Cell Position")
-        y_labels = [f"{i//self.minigrid.grid_size + 1}x{i%self.minigrid.grid_size + 1}" for i in range(self.minigrid.n_cells)]
-        x_labels = [f"{i}" for i in range(self.minigrid.n_orientations)]
-        plt.yticks(range(self.minigrid.n_cells), y_labels)
-        plt.xticks(range(self.minigrid.n_orientations), x_labels)
-        plt.show()
+        if plot_values:
+
+            plt.figure(figsize=(5, 2*self.minigrid.grid_size))
+            im = plt.imshow(V.reshape((self.minigrid.n_cells,4)), vmin= V.min(), vmax=V.max())
+            colorbar_ticks = np.linspace(V.max(), V.min(), 10)
+            plt.colorbar(im, ticks=colorbar_ticks) 
+            plt.title("V(s)")
+            plt.xlabel("Orientation")
+            plt.ylabel("Cell Position")
+            y_labels = [f"{i//self.minigrid.grid_size + 1}x{i%self.minigrid.grid_size + 1}" for i in range(self.minigrid.n_cells)]
+            x_labels = [f"{i}" for i in range(self.minigrid.n_orientations)]
+            plt.yticks(range(self.minigrid.n_cells), y_labels)
+            plt.xticks(range(self.minigrid.n_orientations), x_labels)
+            plt.show()
 
     def plot_path(self, policy, start = 0, path='MDP_policy_path.gif'):
         self.minigrid.s0 = start if self.minigrid.s0 != start else self.minigrid.s0

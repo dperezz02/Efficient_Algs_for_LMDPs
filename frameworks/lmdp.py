@@ -7,12 +7,13 @@ from scipy.sparse import csr_matrix, isspmatrix_csr
 
 
 class LMDP:
-    def __init__(self, n_states, n_terminal_states):
+    def __init__(self, n_states, n_terminal_states, lmbda = 1):
         self.n_states = n_states
         self.n_nonterminal_states = n_states - n_terminal_states
         self.P0 = np.zeros((self.n_nonterminal_states, n_states))
         self.R = np.zeros(n_states) # Assuming terminal states are at the end of the state space
         self.s0 = 0 
+        self.lmbda = lmbda
 
     def act(self, current_state, P):
         """Transition function."""
@@ -26,8 +27,10 @@ class LMDP:
         terminal = next_state >= self.n_nonterminal_states
         return next_state, reward, terminal
     
-    def power_iteration(self, lmbda = 1, epsilon = 1e-10, sparse=True):
+    def power_iteration(self, lmbda = None, epsilon = 1e-10):
         """Power iteration algorithm to compute the optimal Z function."""
+
+        lmbda = self.lmbda if lmbda is None else lmbda
 
         P0 = self.P0 if isspmatrix_csr(self.P0) else csr_matrix(self.P0)
         
@@ -36,9 +39,6 @@ class LMDP:
         n_steps = 0
         
         G = csr_matrix(np.diag(np.exp(self.R[:self.n_nonterminal_states] / lmbda)))
-        if sparse == False:
-            G = G.toarray()
-            P0 = P0.toarray()
         ZT = np.exp(self.R[self.n_nonterminal_states:] / lmbda)
 
         while max(V_diff) - min(V_diff) > epsilon:
@@ -67,12 +67,15 @@ class LMDP:
             Pu /= row_sums
         return Pu
     
-    def Z_to_V(self, Z, lmbda = 1):
+    def Z_to_V(self, Z, lmbda = None):
+        lmbda = self.lmbda if lmbda is None else lmbda
         V = lmbda * np.log(Z)
         return V
   
-    def embedding_to_MDP(self, lmbda = 1):
+    def embedding_to_MDP(self, lmbda = None):
         """Embed the LMDP into an MDP."""
+
+        lmbda = self.lmbda if lmbda is None else lmbda
         
         # Extract the number of actions from nonzero transition probabilities
         P0 = self.P0.toarray() if isspmatrix_csr(self.P0) else self.P0
