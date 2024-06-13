@@ -104,26 +104,6 @@ if __name__ == "__main__":
     # # # #minigrid_mdp_embedded_plots.plot_path(opt_policy2, path = 'plots\MDP_embedded_value_iteration_path.gif')
     #print("Embedding Mean Squared Error: ", np.round(embedding_rmse*100,5), "%")
 
-
-    mdp = Minigrid_MDP(grid_size=3, walls = walls)
-    lmdp, embedding_mse = mdp.embedding_to_LMDP()
-    print("Embedding Mean Squared Error: ", embedding_mse)
-
-    for grid_size in [15, 20, 30, 40, 50]:
-        g = Minigrid(grid_size=grid_size, walls=walls)
-
-        start_time = time.time()
-        for i in range(10):
-            mdp_g, _ = g.embedding_to_MDP()
-        end_time = time.time()
-        print("Execution time for vectorized embedding in grid size", grid_size, ": ", (end_time - start_time) / 10)
-
-        start_time = time.time()
-        for i in range(10):
-            mdp_g, _ = g.embedding_to_MDP_loop()
-        end_time = time.time()
-        print("Execution time for loop embedding in grid size", grid_size, ": ", (end_time - start_time) / 10)
-
     # Q-learning Embedded MDP
     # print("Q-learning training...")
     # qlearning = QLearning(mdp_minigrid, gamma=gamma, learning_rate=0.25, learning_rate_decay=0.99999, learning_rate_min=0.0005, epsilon=1, epsilon_decay=0.9995, epsilon_min = 0)

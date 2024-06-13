@@ -59,19 +59,3 @@ if __name__ == "__main__":
     # lmdp_g, mse = mdp_g.embedding_to_LMDP()
     # print("Embedding Mean Squared Error: ", mse)
     
-
-
-    for grid_size in [15, 20, 30, 40, 50]:
-        g = SimpleGrid(grid_size)
-
-        start_time = time.time()
-        for i in range(10):
-            mdp_g, _ = g.embedding_to_MDP()
-        end_time = time.time()
-        print("Execution time for vectorized embedding in grid size", grid_size, ": ", (end_time - start_time) / 10)
-
-        start_time = time.time()
-        for i in range(10):
-            mdp_g, _ = g.embedding_to_MDP_loop()
-        end_time = time.time()
-        print("Execution time for loop embedding in grid size", grid_size, ": ", (end_time - start_time) / 10)
