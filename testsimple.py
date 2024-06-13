@@ -4,9 +4,9 @@ import numpy as np
 import time
 
 if __name__ == "__main__":
-    grid_size = 3
+    grid_size = 2
 
-    #g = SimpleGrid(grid_size)
+    g = SimpleGrid(grid_size)
     # Z, nsteps = g.power_iteration(1, 1e-10)
     # #print(Z)
     # #print(g.Z_to_V(Z))
@@ -41,8 +41,34 @@ if __name__ == "__main__":
     mdp = SimpleGrid_MDP(grid_size)
     minigrid_mdp_plots = Minigrid_MDP_Plotter(mdp)
     
-    # start_time = time.time()
-    minigrid_lmdp1, embedding_mse = mdp.embedding_to_LMDP()
+    mdp_minigrid, embedding_mse = g.embedding_to_MDP()
+    print("Embedding Mean Squared Error: ", embedding_mse)
+    print(mdp_minigrid.P[0], mdp_minigrid.R[0])
+    lmdp_minigrid, embedding_mse = mdp_minigrid.embedding_to_LMDP()
+    print("Embedding Mean Squared Error: ", embedding_mse)
+    print(lmdp_minigrid.P0[0], lmdp_minigrid.R[0])
+    mdp_minigrid2, embedding_mse = lmdp_minigrid.embedding_to_MDP()
+    print("Embedding Mean Squared Error: ", embedding_mse)
+    print(mdp_minigrid2.P[0], mdp_minigrid2.R[0])
+    lmdp_minigrid, embedding_mse = mdp_minigrid2.embedding_to_LMDP()
+    print("Embedding Mean Squared Error: ", embedding_mse)
+    print(lmdp_minigrid.P0[0], lmdp_minigrid.R[0])
+    mdp_minigrid2, embedding_mse = lmdp_minigrid.embedding_to_MDP()
+    print("Embedding Mean Squared Error: ", embedding_mse)
+    print(mdp_minigrid2.P[0], mdp_minigrid2.R[0])
+
+    print(mdp.P[0], mdp.R[0])
+    minigrid_lmdp, embedding_mse = mdp.embedding_to_LMDP()
+    print("Embedding Mean Squared Error: ", embedding_mse)
+    minigrid_mdp, embedding_mse = minigrid_lmdp.embedding_to_MDP()
+    print("Embedding Mean Squared Error: ", embedding_mse)
+    print(minigrid_mdp.P[0], minigrid_mdp.R[0])
+    minigrid_lmdp, embedding_mse = minigrid_mdp.embedding_to_LMDP()
+    print("Embedding Mean Squared Error: ", embedding_mse)
+    minigrid_mdp, embedding_mse = minigrid_lmdp.embedding_to_MDP()
+    print("Embedding Mean Squared Error: ", embedding_mse)
+    print(minigrid_mdp.P[0], minigrid_mdp.R[0])
+    minigrid_lmdp, embedding_mse = minigrid_mdp.embedding_to_LMDP()
     print("Embedding Mean Squared Error: ", embedding_mse)
     
     # mdp_minigrid2, embedding_mse = g.embedding_to_MDP()

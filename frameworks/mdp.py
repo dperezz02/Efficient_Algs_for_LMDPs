@@ -85,10 +85,8 @@ class MDP:
             K_min = 0
             K_max = 1
 
-            lmdp.P0 = csr_matrix(lmdp.P0)
-
             #Find the optimal K through ternary search
-            while K_max - K_min > 1e-10:
+            while K_max - K_min > 1e-5:
                 m1 = K_min + (K_max - K_min) / 3
                 lmdp.R = m1 * R
                 Z1, _ = lmdp.power_iteration(lmbda)
@@ -141,6 +139,7 @@ class MDP:
 
         
         embedding_mse = np.mean(np.square(lmdp.Z_to_V(lmdp.power_iteration(lmbda)[0]) - V))
+        lmdp.P0 = csr_matrix(lmdp.P0)
         return lmdp, embedding_mse
 
 
