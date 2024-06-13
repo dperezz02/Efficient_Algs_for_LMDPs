@@ -44,12 +44,46 @@ class MDP:
 
         return Q, greedy_policy, n_steps
     
+    def bellman_operator(self, Q, gamma=0.95):
+        TQ = np.zeros((self.n_states, self.n_actions))
+
+        greedy_policy = np.zeros(self.n_states, dtype=int)
+
+        for s in range(self.n_states):
+            if s>=self.n_nonterminal_states:
+                TQ[s,:] = self.R[s,:]
+            else:
+                for a in range(self.n_actions):
+                    prob = self.P[s, a]
+                    reward = float(self.R[s][a])
+
+                    TQ[s, a] = np.sum(prob * (reward + gamma * Q.max(axis=1)))
+
+        greedy_policy = np.argmax(TQ, axis=1)
+
+        return TQ, greedy_policy
+
+    def value_iteration_loop(self, epsilon=1e-10, gamma = 0.95, max_iters=10000):
+        Q0 = np.zeros((self.n_states, self.n_actions))
+        n_steps = 0
+        Q = Q0
+
+        for i in range(max_iters):
+            n_steps += 1
+            TQ, greedy_policy = self.bellman_operator(Q, gamma)
+
+            err = np.abs(TQ.max(axis=1) - Q.max(axis=1)).max()
+            if err < epsilon:
+                return TQ, greedy_policy, n_steps
+
+            Q = TQ
+    
     def shortest_path_length(self, policy, s=0):
         """Compute the shortest path length from a given state to a terminal state.
         :param policy: The policy to follow.
         :param s: The starting state. """
 
-        done = self.S[s] == 0
+        done = s >= self.n_nonterminal_states
         n_steps = 0
         while not done:
             s, _, done = self.act(s, policy[s])

@@ -40,37 +40,20 @@ if __name__ == "__main__":
 
     mdp = SimpleGrid_MDP(grid_size)
     minigrid_mdp_plots = Minigrid_MDP_Plotter(mdp)
-    
-    mdp_minigrid, embedding_mse = g.embedding_to_MDP()
-    print("Embedding Mean Squared Error: ", embedding_mse)
-    print(mdp_minigrid.P[0], mdp_minigrid.R[0])
-    lmdp_minigrid, embedding_mse = mdp_minigrid.embedding_to_LMDP()
-    print("Embedding Mean Squared Error: ", embedding_mse)
-    print(lmdp_minigrid.P0[0], lmdp_minigrid.R[0])
-    mdp_minigrid2, embedding_mse = lmdp_minigrid.embedding_to_MDP()
-    print("Embedding Mean Squared Error: ", embedding_mse)
-    print(mdp_minigrid2.P[0], mdp_minigrid2.R[0])
-    lmdp_minigrid, embedding_mse = mdp_minigrid2.embedding_to_LMDP()
-    print("Embedding Mean Squared Error: ", embedding_mse)
-    print(lmdp_minigrid.P0[0], lmdp_minigrid.R[0])
-    mdp_minigrid2, embedding_mse = lmdp_minigrid.embedding_to_MDP()
-    print("Embedding Mean Squared Error: ", embedding_mse)
-    print(mdp_minigrid2.P[0], mdp_minigrid2.R[0])
 
-    print(mdp.P[0], mdp.R[0])
-    minigrid_lmdp, embedding_mse = mdp.embedding_to_LMDP()
-    print("Embedding Mean Squared Error: ", embedding_mse)
-    minigrid_mdp, embedding_mse = minigrid_lmdp.embedding_to_MDP()
-    print("Embedding Mean Squared Error: ", embedding_mse)
-    print(minigrid_mdp.P[0], minigrid_mdp.R[0])
-    minigrid_lmdp, embedding_mse = minigrid_mdp.embedding_to_LMDP()
-    print("Embedding Mean Squared Error: ", embedding_mse)
-    minigrid_mdp, embedding_mse = minigrid_lmdp.embedding_to_MDP()
-    print("Embedding Mean Squared Error: ", embedding_mse)
-    print(minigrid_mdp.P[0], minigrid_mdp.R[0])
-    minigrid_lmdp, embedding_mse = minigrid_mdp.embedding_to_LMDP()
-    print("Embedding Mean Squared Error: ", embedding_mse)
-    
+    grid_sizes = [2,3,5,10,15,20,30,40,50,60,70,80,90,100]
+    for grid_size in grid_sizes:
+        mdp = SimpleGrid_MDP(grid_size)
+        start_time = time.time()
+        for i in range(1000):
+            Q, _, _ = mdp.value_iteration(1e-10, 1)
+        print("Value iteration took: ", (time.time() - start_time)/1000, " seconds for grid size: ", grid_size)
+        start_time = time.time()
+        for i in range(1000):
+            Q2, _, _ = mdp.value_iteration_loop(1e-10, 1)
+        print("Value iteration Loop took: ", (time.time() - start_time)/1000, " seconds for grid size: ", grid_size)
+        print("Total Absolute Error: ", np.sum(np.abs(Q-Q2)))
+
     # mdp_minigrid2, embedding_mse = g.embedding_to_MDP()
     # print("Total embedding error (LMDP -> MDP): ", embedding_mse)
     # mdp2 = lmdp.embedding_to_MDP()

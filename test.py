@@ -24,6 +24,20 @@ if __name__ == "__main__":
     n_iters = int(1e6)
     lmbda = 1
 
+    grid_sizes = [2,3,5,10,15,20,30,40,50,60,70,80,90,100]
+    for grid_size in grid_sizes:
+        mdp = Minigrid_MDP(grid_size=grid_size, walls = [])
+        start_time = time.time()
+        for i in range(5):
+            Q, _, _ = mdp.value_iteration(epsilon, gamma)
+        print("Value iteration took: ", (time.time() - start_time)/5, " seconds for grid size: ", grid_size)
+        start_time = time.time()
+        for i in range(1):
+            Q2, _, _ = mdp.value_iteration_loop(epsilon, gamma)
+        print("Value iteration Loop took: ", (time.time() - start_time)/1, " seconds for grid size: ", grid_size)
+        print("Total Absolute Error: ", np.sum(np.abs(Q-Q2)))
+
+
     # Value Iteration MDP
     #Q, opt_policy, n_steps = minigrid_mdp.value_iteration(epsilon, gamma)
     #print(Q.max(axis=1))
@@ -55,7 +69,7 @@ if __name__ == "__main__":
     # q_averaged_throughputs = plot_episode_throughput(throughputs, minigrid_mdp.shortest_path_length(opt_policy), plot_batch=True)
 
     # LMDP
-    minigrid = Minigrid(grid_size=grid_size, walls=walls)
+    #minigrid = Minigrid(grid_size=grid_size, walls=walls)
     # minigrid_plots = Minigrid_LMDP_Plotter(minigrid)
 
     # # Power Iteration LMDP
@@ -91,24 +105,6 @@ if __name__ == "__main__":
     # #                 if zlearning.Pu[i,j] != 0: f.write("Pu[{}][{}]: {}\n".format(minigrid.states[i], minigrid.states[j], zlearning.Pu[i,j]))
     # # z_averaged_throughputs = plot_episode_throughput(z_throughputs, minigrid_mdp.shortest_path_length(opt_policy), plot_batch=True)
 
-    # Embedded MDP
-    mdp_minigrid, embedding_mse = minigrid.embedding_to_MDP()
-    print("Embedding Mean Squared Error: ", embedding_mse)
-    lmdp_minigrid, embedding_mse = mdp_minigrid.embedding_to_LMDP()
-    print("Embedding Mean Squared Error: ", embedding_mse)
-    mdp_minigrid2, embedding_mse = lmdp_minigrid.embedding_to_MDP()
-    print("Embedding Mean Squared Error: ", embedding_mse)
-    lmdp_minigrid, embedding_mse = mdp_minigrid2.embedding_to_LMDP()
-    print("Embedding Mean Squared Error: ", embedding_mse)
-    mdp_minigrid2, embedding_mse = lmdp_minigrid.embedding_to_MDP()
-    print("Embedding Mean Squared Error: ", embedding_mse)
-
-    minigrid_lmdp, embedding_mse = minigrid_mdp.embedding_to_LMDP()
-    print("Embedding Mean Squared Error: ", embedding_mse)
-    minigrid_mdp, embedding_mse = minigrid_lmdp.embedding_to_MDP()
-    print("Embedding Mean Squared Error: ", embedding_mse)
-    minigrid_lmdp, embedding_mse = minigrid_mdp.embedding_to_LMDP()
-    print("Embedding Mean Squared Error: ", embedding_mse)
 
 
 
