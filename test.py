@@ -105,48 +105,24 @@ if __name__ == "__main__":
     #print("Embedding Mean Squared Error: ", np.round(embedding_rmse*100,5), "%")
 
 
-    # mdp = Minigrid_MDP(grid_size=30, walls = walls)
-    # lmdp, embedding_mse = mdp.embedding_to_LMDP()
-    # print("Embedding Mean Squared Error: ", embedding_mse)
-    # lmdp2, embedding_mse = mdp.embedding_to_LMDP(binary=True)
-    # print("Embedding Mean Squared Error: ", embedding_mse)
-    # lmdp3, embedding_mse = mdp.embedding_to_LMDP(iterative=True)
-    # print("Embedding Mean Squared Error: ", embedding_mse)
-    # lmdp4, embedding_mse = mdp.embedding_to_LMDP(todorov=True)
-    # print("Embedding Mean Squared Error: ", embedding_mse)
+    mdp = Minigrid_MDP(grid_size=3, walls = walls)
+    lmdp, embedding_mse = mdp.embedding_to_LMDP()
+    print("Embedding Mean Squared Error: ", embedding_mse)
 
-    grid_sizes = [2,3,5,10,15,20,30,40,50,60]
-    mses = [[],[],[]]#,[]]
-    for grid_size in grid_sizes:
-        print(grid_size)
-        mdp = Minigrid_MDP(grid_size=grid_size, walls = [])
-        _, embedding_mse = mdp.embedding_to_LMDP()
-        mses[0].append(embedding_mse)
-        print(embedding_mse)
-        # _, embedding_mse = mdp.embedding_to_LMDP(binary=True)
-        # mses[1].append(embedding_mse)
-        _, embedding_mse = mdp.embedding_to_LMDP(iterative=True)
-        mses[1].append(embedding_mse)
-        print(embedding_mse)
-        _, embedding_mse = mdp.embedding_to_LMDP(todorov=False)
-        mses[2].append(embedding_mse)
-    
-    minigrid_mdp_plots.plot_mse_vs_grid_size([16,36,100,400,900,1600,3600,6400,10000,14400], mses, ["TS", "SPA", "TE"], save_path = "plots/")
+    for grid_size in [15, 20, 30, 40, 50]:
+        g = Minigrid(grid_size=grid_size, walls=walls)
 
-    
+        start_time = time.time()
+        for i in range(10):
+            mdp_g, _ = g.embedding_to_MDP()
+        end_time = time.time()
+        print("Execution time for vectorized embedding in grid size", grid_size, ": ", (end_time - start_time) / 10)
 
-    #minigrid_mdp_plots.plot_embedding_error_scatter(mdp, [lmdp, lmdp2, lmdp3, lmdp4], ["TS","BS", "SPA", "TE"], save_path = "plots\embedding_error_scatter.png")
-
-    # #print(minigrid_lmdp.R)
-    # #print(minigrid_lmdp.P0)
-    # Z, n_steps = minigrid_lmdp.power_iteration(lmbda = lmbda, epsilon=epsilon)
-    # #print("Power iteration took: ", n_steps, " steps before converging with epsilon:", epsilon)
-    # V = minigrid.Z_to_V(Z)
-    #print("Total embedding error: ", np.sum(np.abs(V-Q2.max(axis=1))))
-    # with open("value_function_power_iteration_embedded.txt", "w") as f: # Print the transition matrix from power iteration
-    #     for i in range(minigrid.n_states):
-    #         f.write("V[{}]: {}\n".format(minigrid.states[i], V[i]))
-    
+        start_time = time.time()
+        for i in range(10):
+            mdp_g, _ = g.embedding_to_MDP_loop()
+        end_time = time.time()
+        print("Execution time for loop embedding in grid size", grid_size, ": ", (end_time - start_time) / 10)
 
     # Q-learning Embedded MDP
     # print("Q-learning training...")

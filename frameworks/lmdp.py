@@ -106,6 +106,33 @@ class LMDP:
 
         return mdp, embedding_mse
     
+    def embedding_to_MDP_loop(self, lmbda = 1):
+        """Embed the LMDP into an MDP."""
+        
+        # Extract the number of actions from nonzero transition probabilities
+        P0 = self.P0.toarray() if isspmatrix_csr(self.P0) else self.P0
+        n_actions = np.max((P0 > 0).sum(axis=1))
+        mdp = MDP(self.n_states, self.n_states - self.n_nonterminal_states, n_actions)
+        Z_opt, _ = self.power_iteration(lmbda)
+        Pu = self.compute_Pu(Z_opt)
+        
+        for i in range(mdp.n_states):
+            mdp.R[i, :] = self.R[i] 
+            if i < self.n_nonterminal_states:
+                p0 = self.P0[i,Pu[i].indices].toarray()[0] if isspmatrix_csr(self.P0) else self.P0[i,Pu[i].indices]
+                mdp.R[i, :] = self.R[i] - lmbda * np.sum(Pu[i].data * np.log(Pu[i].data / p0))
+                data = Pu[i].data
+                for a in range(mdp.n_actions):
+                    mdp.P[i, a, (Pu[i].indices)] = np.roll(data,a)
+
+        # Compute the embedding error
+        V_lmdp = self.Z_to_V(Z_opt)
+        Q, _, _ = mdp.value_iteration(gamma=1)
+        V_mdp = Q.max(axis=1)
+        embedding_mse = np.mean(np.square(V_lmdp - V_mdp))
+
+        return mdp, embedding_mse
+    
 class Minigrid(LMDP):
 
     DIR_TO_VEC = [
