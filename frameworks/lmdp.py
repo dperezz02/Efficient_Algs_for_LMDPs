@@ -26,15 +26,19 @@ class LMDP:
         terminal = next_state >= self.n_nonterminal_states
         return next_state, reward, terminal
     
-    def power_iteration(self, lmbda = 1, epsilon = 1e-10):
+    def power_iteration(self, lmbda = 1, epsilon = 1e-10, sparse=True):
         """Power iteration algorithm to compute the optimal Z function."""
 
         P0 = self.P0 if isspmatrix_csr(self.P0) else csr_matrix(self.P0)
+        
         Z = np.ones(self.n_states)
         V_diff = np.arange(self.n_states)
         n_steps = 0
         
         G = csr_matrix(np.diag(np.exp(self.R[:self.n_nonterminal_states] / lmbda)))
+        if sparse == False:
+            G = G.toarray()
+            P0 = P0.toarray()
         ZT = np.exp(self.R[self.n_nonterminal_states:] / lmbda)
 
         while max(V_diff) - min(V_diff) > epsilon:

@@ -38,21 +38,20 @@ if __name__ == "__main__":
     # #print(Q.max(axis=1))
     # print("Total embedding error (LMDP -> MDP): ", np.sum(np.abs(lmdp2.Z_to_V(Z) - Q.max(axis=1))))
 
-    mdp = SimpleGrid_MDP(grid_size)
-    minigrid_mdp_plots = Minigrid_MDP_Plotter(mdp)
+    # mdp = SimpleGrid_MDP(grid_size)
+    # minigrid_mdp_plots = Minigrid_MDP_Plotter(mdp)
 
-    grid_sizes = [2,3,5,10,15,20,30,40,50,60,70,80,90,100]
+    grid_sizes = [60,70,80,90,100]#2,3,5,10,15,20,30,40,50,
     for grid_size in grid_sizes:
-        mdp = SimpleGrid_MDP(grid_size)
+        g = SimpleGrid(grid_size)
         start_time = time.time()
-        for i in range(1000):
-            Q, _, _ = mdp.value_iteration(1e-10, 1)
-        print("Value iteration took: ", (time.time() - start_time)/1000, " seconds for grid size: ", grid_size)
+        for i in range(5):
+            _, _ = g.power_iteration(1, 1e-10)
+        print("Power iteration took: ", (time.time() - start_time)/5, " seconds for grid size: ", grid_size)
         start_time = time.time()
-        for i in range(1000):
-            Q2, _, _ = mdp.value_iteration_loop(1e-10, 1)
-        print("Value iteration Loop took: ", (time.time() - start_time)/1000, " seconds for grid size: ", grid_size)
-        print("Total Absolute Error: ", np.sum(np.abs(Q-Q2)))
+        for i in range(1):
+            _, _ = g.power_iteration(1, 1e-10, sparse=False)
+        print("Value iteration Loop took: ", (time.time() - start_time)/1, " seconds for grid size: ", grid_size)
 
     # mdp_minigrid2, embedding_mse = g.embedding_to_MDP()
     # print("Total embedding error (LMDP -> MDP): ", embedding_mse)
