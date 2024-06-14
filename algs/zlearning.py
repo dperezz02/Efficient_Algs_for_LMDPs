@@ -21,6 +21,7 @@ class ZLearning:
         self.Pu = self.lmdp.P0
         self.reset_randomness = reset_randomness
         self.state = self.lmdp.s0
+        self.r = 0
         self.episode_end = False
         self.at_goal = False
 
@@ -40,8 +41,8 @@ class ZLearning:
     def step(self):
 
         # Get Delta
-        r = self.lmdp.R[self.state]
-        delta = self.get_Z(r, self.state)
+        self.r = self.lmdp.R[self.state]
+        delta = self.get_Z(self.r, self.state)
 
         # Update Z
         self.Z[self.state] += self.learning_rate * delta
@@ -56,7 +57,7 @@ class ZLearning:
         if self.episode_end:
             self.n_episodes += 1
             self.learning_rate = self.c / (self.c + self.n_episodes)
-            self.at_goal = self.mdp.R[self.state] == 0
+            self.at_goal = self.lmdp.R[self.state] == 0
             self.state = np.random.choice(self.lmdp.n_nonterminal_states) if np.random.rand() < self.reset_randomness else self.lmdp.s0
 
 def Zlearning_training(zlearning: ZLearning, n_steps = int(5e5)):
@@ -65,6 +66,7 @@ def Zlearning_training(zlearning: ZLearning, n_steps = int(5e5)):
     s0 = zlearning.lmdp.s0
     opt_paths = list(zlearning.lmdp.shortest_path_length(s) for s in range(zlearning.lmdp.n_states)) if zlearning.reset_randomness != 0 else None
     z_lengths = []
+    cumulative_reward = 0
     z_throughputs = np.zeros(n_steps)
 
     Z_est = np.zeros((n_steps, zlearning.lmdp.n_states))
@@ -72,14 +74,16 @@ def Zlearning_training(zlearning: ZLearning, n_steps = int(5e5)):
     while tt < n_steps:
         zlearning.step()
         Z_est[tt, :] = zlearning.Z
+        cumulative_reward += zlearning.r
         tt += 1
 
         if zlearning.episode_end:
             z_lengths.append(tt-l0)  if zlearning.reset_randomness == 0 else z_lengths.append((tt-l0)/opt_paths[s0]) 
-            z_throughput = 1 if zlearning.at_goal else 0 
-            z_throughputs[l0:tt] = z_throughput/(tt-l0) if zlearning.reset_randomness == 0 else z_throughput*opt_paths[s0]/(tt-l0)
+            cumulative_reward = cumulative_reward if zlearning.at_goal else cumulative_reward + np.min(zlearning.mdp.R[zlearning.state])
+            z_throughputs[l0:tt] = cumulative_reward if zlearning.reset_randomness == 0 else cumulative_reward*opt_paths[s0]/(tt-l0)
             l0 = tt
             s0 = zlearning.state
+            cumulative_reward = 0
 
         if tt % 10000 == 0:
 

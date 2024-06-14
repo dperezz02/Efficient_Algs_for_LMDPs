@@ -6,13 +6,13 @@ import frameworks
 from scipy.sparse import csr_matrix, isspmatrix_csr
 
 class MDP:
-    def __init__(self, n_states, n_terminal_states, n_actions, gamma = 0.95):
+    def __init__(self, n_states, n_terminal_states, n_actions, gamma = 0.95, s0 = 0):
         self.n_states = n_states
         self.n_nonterminal_states = n_states - n_terminal_states
         self.n_actions = n_actions
         self.P = np.zeros((self.n_nonterminal_states, n_actions, n_states))
         self.R = np.zeros((n_states, n_actions)) # Assuming terminal states are at the end of the state space
-        self.s0 = 0
+        self.s0 = s0
         self.gamma = gamma
 
     def act(self, current_state, action):
@@ -164,16 +164,16 @@ class Minigrid_MDP(MDP):
         np.array((0, -1)),
     ]
 
-    def __init__(self, grid_size = 14, objects = {}, dynamics = None):
+    def __init__(self, grid_size = 14, objects = {}, map = None, dynamics = None, gamma = 0.95):
         """Initialize the Minigrid MDP."""
 
         self.grid_size = grid_size
         self.n_orientations = 4
         self.actions = list(range(3))
         self.J = {"goal": 0, "lava": -grid_size*grid_size} # Determine reward function for terminal states
-        n_states, n_terminal_states = self._create_environment(grid_size, objects)
+        n_states, n_terminal_states = self._create_environment(grid_size, objects, map=map)
 
-        super().__init__(n_states = n_states, n_terminal_states = n_terminal_states, n_actions = len(self.actions))
+        super().__init__(n_states = n_states, n_terminal_states = n_terminal_states, n_actions = len(self.actions), gamma = gamma, s0 = self.s0)
         self.n_cells = int(self.n_states / self.n_orientations)
 
         if dynamics is None:
@@ -183,10 +183,10 @@ class Minigrid_MDP(MDP):
             self.P = dynamics['P']
             self.R = dynamics['R']
 
-    def _create_environment(self, grid_size, objects):
+    def _create_environment(self, grid_size, objects, map=map):
         """Create the Minigrid environment."""
 
-        self.env = OrderEnforcing(CustomEnv(size=grid_size+2, objects=objects, render_mode="rgb_array"))
+        self.env = OrderEnforcing(CustomEnv(size=grid_size+2, objects=objects, map=map,render_mode="rgb_array"))
         self.env.reset()
 
         nonterminal_states = []
@@ -204,6 +204,7 @@ class Minigrid_MDP(MDP):
         self.states = nonterminal_states + terminal_states
         assert self.grid_size * self.grid_size - len(self.env.walls) == len(self.states) / self.n_orientations, "Invalid number of states"
         self.state_to_index = {state: index for index, state in enumerate(self.states)}
+        self.s0 = self.state_to_index[(self.env.agent_start_pos[0], self.env.agent_start_pos[1], self.env.agent_start_dir)]
         return len(self.states), len(terminal_states)
 
     def _create_P(self):

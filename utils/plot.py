@@ -105,7 +105,7 @@ class Plotter:
 
         plt.xlabel('Number of States', fontsize=14)
         plt.ylabel('Mean Squared Error (MSE)', fontsize=14)
-        #plt.yscale('log')  # Use logarithmic scale for y-axis
+        plt.yscale('log')  # Use logarithmic scale for y-axis
         plt.title('MSE vs. Number of States for Embedding Approaches', fontsize=16)
         plt.grid(True, which="both", ls="--", linewidth=0.5)
 
@@ -140,12 +140,13 @@ class Plotter:
             plt.show()
             print("Last batch averaged length: ", averaged_lengths[-1])
 
-    def plot_episode_throughput(self, throughputs, opt_length = None, smooth_window=5000):
+    def plot_episode_throughput(self, throughputs, opt_length = None, smooth_window=500):
         plt.plot(range(1, len(throughputs)+1), throughputs, alpha=0.09, color='b')
         if opt_length is not None: 
-            plt.axhline(y=1/opt_length, color='r', linestyle='--', alpha=0.5)
+            plt.axhline(y=-opt_length, color='r', linestyle='--', alpha=0.5)
         throughputs_series = pd.Series(throughputs)
         smoothed_throughputs = throughputs_series.rolling(window=smooth_window, center=True).mean()
+        plt.plot(range(1, len(throughputs)+1), throughputs, color='b', alpha=0.2)
         plt.plot(range(1, len(smoothed_throughputs)+1), smoothed_throughputs, color='b')
         plt.xlabel("Time step")
         plt.ylabel("Averaged Throughput")
