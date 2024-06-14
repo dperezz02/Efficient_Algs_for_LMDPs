@@ -17,10 +17,13 @@ class ZLearning:
         self.c = c
         self.n_episodes = 0
         self.Z = np.ones(lmdp.n_states)
+        self.Z[self.lmdp.n_nonterminal_states:] = np.exp(self.lmdp.R[self.lmdp.n_nonterminal_states:] / lmbda)
         self.Pu = self.lmdp.P0
         self.reset_randomness = reset_randomness
         self.state = self.lmdp.s0
         self.episode_end = False
+        self.at_goal = False
+
 
     def get_Z(self, r, x):
         """
@@ -48,17 +51,19 @@ class ZLearning:
 
         # Sample next state
         self.state, _ , self.episode_end = self.lmdp.act(self.state, self.Pu)
+        self.at_goal = self.episode_end
 
         if self.episode_end:
             self.n_episodes += 1
             self.learning_rate = self.c / (self.c + self.n_episodes)
-            self.state = np.random.choice(self.lmdp.n_states) if np.random.rand() < self.reset_randomness else self.lmdp.s0
+            self.at_goal = self.mdp.R[self.state] == 0
+            self.state = np.random.choice(self.lmdp.n_nonterminal_states) if np.random.rand() < self.reset_randomness else self.lmdp.s0
 
 def Zlearning_training(zlearning: ZLearning, n_steps = int(5e5)):
     tt = 0
     l0 = 0
-    s0 = ZLearning.lmdp.s0
-    opt_paths = list(ZLearning.lmdp.shortest_path_length(s) for s in range(ZLearning.lmdp.n_states))
+    s0 = zlearning.lmdp.s0
+    opt_paths = list(zlearning.lmdp.shortest_path_length(s) for s in range(zlearning.lmdp.n_states)) if zlearning.reset_randomness != 0 else None
     z_lengths = []
     z_throughputs = np.zeros(n_steps)
 
@@ -70,8 +75,9 @@ def Zlearning_training(zlearning: ZLearning, n_steps = int(5e5)):
         tt += 1
 
         if zlearning.episode_end:
-            z_lengths.append(tt-l0)  if ZLearning.reset_randomness == 0 else z_lengths.append((tt-l0)/opt_paths[s0]) 
-            z_throughputs[l0:tt] = 1/(tt-l0) if ZLearning.reset_randomness == 0 else opt_paths[s0]/(tt-l0)
+            z_lengths.append(tt-l0)  if zlearning.reset_randomness == 0 else z_lengths.append((tt-l0)/opt_paths[s0]) 
+            z_throughput = 1 if zlearning.at_goal else 0 
+            z_throughputs[l0:tt] = z_throughput/(tt-l0) if zlearning.reset_randomness == 0 else z_throughput*opt_paths[s0]/(tt-l0)
             l0 = tt
             s0 = zlearning.state
 

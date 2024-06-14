@@ -141,13 +141,13 @@ class Minigrid(LMDP):
         np.array((0, -1)),
     ]
 
-    def __init__(self, grid_size = 14, walls = [], lavas = [], dynamics = None):
+    def __init__(self, grid_size = 14, objects = {}, dynamics = None):
         """Initialize the minigrid environment."""
 
         self.grid_size = grid_size
         self.n_orientations = 4
         self.J = {"goal": 0, "lava": -grid_size*grid_size} # Determine reward function for terminal states
-        n_states, n_terminal_states = self._create_environment(grid_size, walls, lavas)
+        n_states, n_terminal_states = self._create_environment(grid_size, objects)
         
         super().__init__(n_states = n_states, n_terminal_states = n_terminal_states)
         self.n_cells = int(self.n_states / self.n_orientations)
@@ -159,10 +159,10 @@ class Minigrid(LMDP):
             self.P0 = dynamics['P0']
             self.R = dynamics['R']
 
-    def _create_environment(self, grid_size, walls, lavas):
+    def _create_environment(self, grid_size, objects):
         """Create the environment for the minigrid."""
 
-        self.env = OrderEnforcing(CustomEnv(size=grid_size+2, walls=walls, lavas=lavas, render_mode="rgb_array"))
+        self.env = OrderEnforcing(CustomEnv(size=grid_size+2, objects=objects, render_mode="rgb_array"))
         self.env.reset()
         
         nonterminal_states = []
@@ -178,7 +178,7 @@ class Minigrid(LMDP):
                             nonterminal_states.append(state)
 
         self.states = nonterminal_states + terminal_states
-        assert self.grid_size * self.grid_size - len(walls) == len(self.states) / self.n_orientations, "Invalid number of states"
+        assert self.grid_size * self.grid_size - len(self.env.walls) == len(self.states) / self.n_orientations, "Invalid number of states"
         self.state_to_index = {state: index for index, state in enumerate(self.states)}
         return len(self.states), len(terminal_states)
 
@@ -220,9 +220,14 @@ class Minigrid(LMDP):
     def _is_terminal(self, state: tuple[int, int, int]) -> bool:
         """Check if a state is terminal."""
 
-        pos = self.env.grid.get(state[0], state[1])
-        at_goal = pos is not None and pos.type == "goal"
-        return at_goal
+        at_terminal = self._state_type(state) in self.J.keys()
+        return at_terminal
+    
+    def is_goal(self, s: int) -> bool:
+        """Check if a state is a goal."""
+
+        state = self.states[s]
+        return self._state_type(state) == "goal"
 
     def state_step(self, state: tuple[int, int, int], action: int) -> tuple[int, int, int]:
         """Utility to move states one step forward, no side effect."""

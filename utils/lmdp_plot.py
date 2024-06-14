@@ -61,10 +61,10 @@ class Minigrid_LMDP_Plotter(Plotter):
         self.lmdp.s0 = start if self.lmdp.s0 != start else self.lmdp.s0
         s = self.lmdp.reset()
         done = False
-        with imageio.get_writer(path, mode='I', duration=0.2) as writer:
+        with imageio.get_writer(path, mode='I', duration=0.2, loop=10) as writer:
             writer.append_data(self.lmdp.env.render())
-            while not done:
-                s, _, done = self.lmdp.step(s, PU)
+            while not (done and self.lmdp.is_goal(s)):
+                s, _, done = self.lmdp.step(s, PU) if not self.lmdp.is_goal(s) else (start, 0, False)
                 writer.append_data(self.lmdp.env.render())
         os.startfile(path) #for windows 
 

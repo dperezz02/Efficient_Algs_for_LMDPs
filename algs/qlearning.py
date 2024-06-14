@@ -18,11 +18,13 @@ class QLearning:
         self.epsilon_decay = epsilon_decay
         self.epsilon_min = epsilon_min
         self.Q = np.zeros((mdp.n_states, mdp.n_actions))
+        self.Q[self.mdp.n_nonterminal_states:] = self.mdp.R[self.mdp.n_nonterminal_states:]
         self.Nsa = np.zeros((mdp.n_states, mdp.n_actions))
         self.state = self.mdp.s0
         self.reset_randomness = reset_randomness
         self.RS = np.random.RandomState(seed)
         self.episode_end = False
+        self.at_goal = False
 
     def get_delta(self, r, x, a, y):
         """
@@ -50,6 +52,7 @@ class QLearning:
         # Take mdp action
         a  = self.get_action(self.state)
         next_state, r, self.episode_end = self.mdp.act(self.state, a)
+        self.at_goal = self.episode_end
 
         # Get Delta Update
         delta = self.get_delta(r, self.state, a, next_state)
@@ -65,13 +68,14 @@ class QLearning:
             self.n_episodes += 1
             self.epsilon = max(self.epsilon * self.epsilon_decay, self.epsilon_min)
             self.learning_rate = self.c / (self.c + self.n_episodes)
-            self.state = np.random.choice(self.mdp.n_states) if np.random.rand() < self.reset_randomness else self.mdp.s0
+            self.at_goal = np.sum(self.mdp.R[self.state]) == 0
+            self.state = np.random.choice(self.mdp.n_nonterminal_states) if np.random.rand() < self.reset_randomness else self.mdp.s0
 
 def Qlearning_training(qlearning, n_steps=int(5e5)):
     tt = 0
     l0 = 0
-    s0 = qlearning.lmdp.s0
-    opt_paths = list(qlearning.mdp.shortest_path_length(s) for s in range(qlearning.mdp.n_states))
+    s0 = qlearning.mdp.s0
+    opt_paths = list(qlearning.mdp.shortest_path_length(s) for s in range(qlearning.mdp.n_states)) if qlearning.reset_randomness != 0 else None
     lengths = []
     throughputs = np.zeros(n_steps)
 
@@ -84,8 +88,9 @@ def Qlearning_training(qlearning, n_steps=int(5e5)):
         tt +=1
 
         if qlearning.episode_end:
-            lengths.append((tt-l0)) if qlearning.reset_randomness == 0 else lengths.append((tt-l0)/opt_paths[s0]) 
-            throughputs[l0:tt] = 1/(tt-l0) if qlearning.reset_randomness == 0 else opt_paths[s0]/(tt-l0)
+            lengths.append((tt-l0)) if qlearning.reset_randomness == 0 else lengths.append((tt-l0)/opt_paths[s0])
+            throughput = 1 if qlearning.at_goal else 0 
+            throughputs[l0:tt] = throughput/(tt-l0) if qlearning.reset_randomness == 0 else throughput*opt_paths[s0]/(tt-l0)
             l0 = tt
             s0 = qlearning.state
 

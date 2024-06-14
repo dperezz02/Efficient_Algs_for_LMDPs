@@ -164,14 +164,14 @@ class Minigrid_MDP(MDP):
         np.array((0, -1)),
     ]
 
-    def __init__(self, grid_size = 14, walls = [], lavas = [], dynamics = None):
+    def __init__(self, grid_size = 14, objects = {}, dynamics = None):
         """Initialize the Minigrid MDP."""
 
         self.grid_size = grid_size
         self.n_orientations = 4
         self.actions = list(range(3))
         self.J = {"goal": 0, "lava": -grid_size*grid_size} # Determine reward function for terminal states
-        n_states, n_terminal_states = self._create_environment(grid_size, walls, lavas)
+        n_states, n_terminal_states = self._create_environment(grid_size, objects)
 
         super().__init__(n_states = n_states, n_terminal_states = n_terminal_states, n_actions = len(self.actions))
         self.n_cells = int(self.n_states / self.n_orientations)
@@ -183,10 +183,10 @@ class Minigrid_MDP(MDP):
             self.P = dynamics['P']
             self.R = dynamics['R']
 
-    def _create_environment(self, grid_size, walls, lavas):
+    def _create_environment(self, grid_size, objects):
         """Create the Minigrid environment."""
 
-        self.env = OrderEnforcing(CustomEnv(size=grid_size+2, walls=walls, lavas=lavas, render_mode="rgb_array"))
+        self.env = OrderEnforcing(CustomEnv(size=grid_size+2, objects=objects, render_mode="rgb_array"))
         self.env.reset()
 
         nonterminal_states = []
@@ -202,7 +202,7 @@ class Minigrid_MDP(MDP):
                             nonterminal_states.append(state)
 
         self.states = nonterminal_states + terminal_states
-        assert self.grid_size * self.grid_size - len(walls) == len(self.states) / self.n_orientations, "Invalid number of states"
+        assert self.grid_size * self.grid_size - len(self.env.walls) == len(self.states) / self.n_orientations, "Invalid number of states"
         self.state_to_index = {state: index for index, state in enumerate(self.states)}
         return len(self.states), len(terminal_states)
 
@@ -250,9 +250,15 @@ class Minigrid_MDP(MDP):
     def _is_terminal(self, state: tuple[int, int, int]) -> bool:
         """Check if a state is terminal."""
 
-        at_goal = self._state_type(state) in self.J.keys()
+        at_terminal = self._state_type(state) in self.J.keys()
 
-        return at_goal
+        return at_terminal
+    
+    def is_goal(self, s: int) -> bool:
+        """Check if a state is a goal."""
+
+        state = self.states[s]
+        return self._state_type(state) == "goal"
 
     def _state_step(self, state: tuple[int, int, int], action: int) -> tuple[int, int, int]:
         """Utility to move states one step forward, no side effect."""

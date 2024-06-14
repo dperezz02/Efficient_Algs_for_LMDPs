@@ -140,9 +140,10 @@ class Plotter:
             plt.show()
             print("Last batch averaged length: ", averaged_lengths[-1])
 
-    def plot_episode_throughput(self, throughputs, opt_length, smooth_window=5000):
+    def plot_episode_throughput(self, throughputs, opt_length = None, smooth_window=5000):
         plt.plot(range(1, len(throughputs)+1), throughputs, alpha=0.09, color='b')
-        plt.axhline(y=1/opt_length, color='r', linestyle='--', alpha=0.5)
+        if opt_length is not None: 
+            plt.axhline(y=1/opt_length, color='r', linestyle='--', alpha=0.5)
         throughputs_series = pd.Series(throughputs)
         smoothed_throughputs = throughputs_series.rolling(window=smooth_window, center=True).mean()
         plt.plot(range(1, len(smoothed_throughputs)+1), smoothed_throughputs, color='b')
@@ -268,10 +269,10 @@ class Minigrid_MDP_Plotter(Plotter):
         self.minigrid.s0 = start if self.minigrid.s0 != start else self.minigrid.s0
         s = self.minigrid.reset()
         done = False
-        with imageio.get_writer(path, mode='I', duration=0.2) as writer:
+        with imageio.get_writer(path, mode='I', duration=0.2, loop=10) as writer:
             writer.append_data(self.minigrid.env.render())
-            while not done:
-                s, _, done = self.minigrid.step(s, policy[s])
+            while not (done and self.minigrid.is_goal(s)):
+                s, _, done = self.minigrid.step(s, policy[s]) if not self.minigrid.is_goal(s) else (start, 0, False)
                 writer.append_data(self.minigrid.env.render())
         os.startfile(path)  # for windows
 

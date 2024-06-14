@@ -34,8 +34,7 @@ class CustomEnv(MiniGridEnv):
     def __init__(
         self,
         size=8,
-        walls = [],
-        lavas = [],
+        objects = {},
         agent_start_pos=(1, 1),
         agent_start_dir=0,
         max_steps: int | None = None,
@@ -43,8 +42,8 @@ class CustomEnv(MiniGridEnv):
     ):
         self.agent_start_pos = agent_start_pos
         self.agent_start_dir = agent_start_dir
-        self.walls = walls
-        self.lavas = lavas
+        self.walls = objects.get("walls", [])
+        self.lavas = objects.get("lavas", [])
 
         if max_steps is None:
             max_steps = 4 * size**2
