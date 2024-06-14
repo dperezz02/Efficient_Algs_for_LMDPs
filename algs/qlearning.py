@@ -1,4 +1,5 @@
 import numpy as np
+import time
 
 class QLearning:
     """
@@ -7,7 +8,7 @@ class QLearning:
     If learning_rate is None; alpha(x,a) = 1/max(1, N(s,a))**alpha
     """
     def __init__(self, mdp, gamma=0.99, epsilon=1, epsilon_decay=0.9995,
-                 epsilon_min=0, c = 1, seed=42):
+                 epsilon_min=0, c = 1, reset_randomness = 0.0, seed=42):
         self.mdp = mdp
         self.gamma = gamma
         self.c = c
@@ -19,6 +20,7 @@ class QLearning:
         self.Q = np.zeros((mdp.n_states, mdp.n_actions))
         self.Nsa = np.zeros((mdp.n_states, mdp.n_actions))
         self.state = self.mdp.s0
+        self.reset_randomness = reset_randomness
         self.RS = np.random.RandomState(seed)
         self.episode_end = False
 
@@ -63,15 +65,18 @@ class QLearning:
             self.n_episodes += 1
             self.epsilon = max(self.epsilon * self.epsilon_decay, self.epsilon_min)
             self.learning_rate = self.c / (self.c + self.n_episodes)
-            self.state = self.mdp.s0
+            self.state = np.random.choice(self.mdp.n_states) if np.random.rand() < self.reset_randomness else self.mdp.s0
 
 def Qlearning_training(qlearning, n_steps=int(5e5)):
     tt = 0
     l0 = 0
+    s0 = qlearning.lmdp.s0
+    opt_paths = list(qlearning.mdp.shortest_path_length(s) for s in range(qlearning.mdp.n_states))
     lengths = []
     throughputs = np.zeros(n_steps)
 
     Q_est = np.zeros((qlearning.mdp.n_states, qlearning.mdp.n_actions))
+    start_time = time.time()
     while tt < n_steps:
         qlearning.step()
         # Store estimate of Q*
@@ -79,12 +84,18 @@ def Qlearning_training(qlearning, n_steps=int(5e5)):
         tt +=1
 
         if qlearning.episode_end:
-            lengths.append((tt-l0))
-            throughputs[l0:tt] = 1/(tt-l0)
+            lengths.append((tt-l0)) if qlearning.reset_randomness == 0 else lengths.append((tt-l0)/opt_paths[s0]) 
+            throughputs[l0:tt] = 1/(tt-l0) if qlearning.reset_randomness == 0 else opt_paths[s0]/(tt-l0)
             l0 = tt
+            s0 = qlearning.state
 
         if tt % 10000 == 0:
-            print("Step: ", tt)
+
+            elapsed_time = time.time() - start_time
+            estimated_total_time = (elapsed_time / tt) * n_steps
+            estimated_remaining_time = estimated_total_time - elapsed_time
+
+            print(f"Step: {tt}/{n_steps}, Time: {elapsed_time/60:.2f}m, ETA: {estimated_remaining_time/60:.2f}m")
     
     if l0 != tt: throughputs[l0:tt] = throughputs[l0-1]
 

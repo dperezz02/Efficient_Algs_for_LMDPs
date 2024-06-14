@@ -1,5 +1,6 @@
 import numpy as np
 from scipy.sparse import csr_matrix, isspmatrix_csr
+import time
 
 #-------------------------------
 # Z-Learning implementation
@@ -9,12 +10,12 @@ class ZLearning:
     """
     Implements Z-learning algorithm
     """
-    def __init__(self, lmdp, lmbda=1, learning_rate=0.25, learning_rate_min=0.0005, learning_rate_decay=0.9999, reset_randomness = 0.0):
+    def __init__(self, lmdp, lmbda=1, c = 1, reset_randomness = 0.0):
         self.lmdp = lmdp
         self.lmbda = lmbda
-        self.learning_rate = learning_rate
-        self.min_learning_rate = learning_rate_min
-        self.learning_rate_decay = learning_rate_decay
+        self.learning_rate = 1
+        self.c = c
+        self.n_episodes = 0
         self.Z = np.ones(lmdp.n_states)
         self.Pu = self.lmdp.P0
         self.reset_randomness = reset_randomness
@@ -49,31 +50,39 @@ class ZLearning:
         self.state, _ , self.episode_end = self.lmdp.act(self.state, self.Pu)
 
         if self.episode_end:
-            self.state = np.random.choice(self.n_states) if np.random.rand() < self.reset_randomness else self.lmdp.s0
-            self.learning_rate = np.maximum(self.learning_rate * self.learning_rate_decay, self.min_learning_rate)
+            self.n_episodes += 1
+            self.learning_rate = self.c / (self.c + self.n_episodes)
+            self.state = np.random.choice(self.lmdp.n_states) if np.random.rand() < self.reset_randomness else self.lmdp.s0
 
 def Zlearning_training(zlearning: ZLearning, n_steps = int(5e5)):
     tt = 0
     l0 = 0
-    s0 = 0
+    s0 = ZLearning.lmdp.s0
+    opt_paths = list(ZLearning.lmdp.shortest_path_length(s) for s in range(ZLearning.lmdp.n_states))
     z_lengths = []
     z_throughputs = np.zeros(n_steps)
 
     Z_est = np.zeros((n_steps, zlearning.lmdp.n_states))
+    start_time = time.time()
     while tt < n_steps:
         zlearning.step()
         Z_est[tt, :] = zlearning.Z
         tt += 1
 
         if zlearning.episode_end:
-            z_lengths.append(tt-l0)
-            z_throughputs[l0:tt] = 1/(tt-l0)
-            #z_throughputs[l0:tt] = opt_lengths[s0]/(tt-l0)
+            z_lengths.append(tt-l0)  if ZLearning.reset_randomness == 0 else z_lengths.append((tt-l0)/opt_paths[s0]) 
+            z_throughputs[l0:tt] = 1/(tt-l0) if ZLearning.reset_randomness == 0 else opt_paths[s0]/(tt-l0)
             l0 = tt
             s0 = zlearning.state
 
         if tt % 10000 == 0:
-            print("Step: ", tt)
+
+            elapsed_time = time.time() - start_time
+            estimated_total_time = (elapsed_time / tt) * n_steps
+            estimated_remaining_time = estimated_total_time - elapsed_time
+
+            print(f"Step: {tt}/{n_steps}, Time: {elapsed_time/60:.2f}m, ETA: {estimated_remaining_time/60:.2f}m")
+
 
     if l0 != tt: z_throughputs[l0:tt] = z_throughputs[l0-1]
 

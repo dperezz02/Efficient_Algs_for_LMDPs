@@ -113,6 +113,21 @@ class LMDP:
 
         return mdp, embedding_mse
     
+    def shortest_path_length(self, s=None):
+        """Compute the shortest optimal path length from a given state to a terminal state.
+        :param s: The starting state. """
+
+        s = self.s0 if s is None else s
+
+        Pu = self.compute_Pu(self.power_iteration()[0])
+
+        done = s >= self.n_nonterminal_states
+        n_steps = 0
+        while not done:
+            s, _, done = self.act(s, Pu)
+            n_steps += 1
+        return n_steps
+    
 class Minigrid(LMDP):
 
     DIR_TO_VEC = [
@@ -126,12 +141,13 @@ class Minigrid(LMDP):
         np.array((0, -1)),
     ]
 
-    def __init__(self, grid_size = 14, walls = [], dynamics = None):
+    def __init__(self, grid_size = 14, walls = [], lavas = [], dynamics = None):
         """Initialize the minigrid environment."""
 
         self.grid_size = grid_size
         self.n_orientations = 4
-        n_states, n_terminal_states = self._create_environment(grid_size, walls)
+        self.J = {"goal": 0, "lava": -grid_size*grid_size} # Determine reward function for terminal states
+        n_states, n_terminal_states = self._create_environment(grid_size, walls, lavas)
         
         super().__init__(n_states = n_states, n_terminal_states = n_terminal_states)
         self.n_cells = int(self.n_states / self.n_orientations)
@@ -143,10 +159,10 @@ class Minigrid(LMDP):
             self.P0 = dynamics['P0']
             self.R = dynamics['R']
 
-    def _create_environment(self, grid_size, walls):
+    def _create_environment(self, grid_size, walls, lavas):
         """Create the environment for the minigrid."""
 
-        self.env = OrderEnforcing(CustomEnv(size=grid_size+2, walls=walls, render_mode="rgb_array"))
+        self.env = OrderEnforcing(CustomEnv(size=grid_size+2, walls=walls, lavas=lavas, render_mode="rgb_array"))
         self.env.reset()
         
         nonterminal_states = []
@@ -183,6 +199,9 @@ class Minigrid(LMDP):
         for state in range(self.n_nonterminal_states):
             self.R[state] = -1.0
 
+        for state in range(self.n_nonterminal_states, self.n_states):
+            self.R[state] = self.J[self._state_type(self.states[state])]
+
     def _is_valid_position(self, x: int, y: int) -> bool:
         """Testing whether a coordinate is a valid location."""
 
@@ -191,6 +210,12 @@ class Minigrid(LMDP):
             0 < y < self.env.height and
             (self.env.grid.get(x, y) is None or self.env.grid.get(x, y).can_overlap())
         )
+    
+    def _state_type(self, state: tuple[int, int, int]) -> str:
+        """Return the type of a state."""
+
+        pos = self.env.grid.get(state[0], state[1])
+        return pos.type if pos is not None else None
     
     def _is_terminal(self, state: tuple[int, int, int]) -> bool:
         """Check if a state is terminal."""
@@ -242,7 +267,7 @@ class Minigrid(LMDP):
         """Step function to interact with the environment."""
 
         next_state, reward, done = self.act(state, P)
-        for action in self.actions:
+        for action in range(3):
             if self.state_step(self.states[state], action) == self.states[next_state]:
                 self.env.step(action)
         return next_state, reward, done

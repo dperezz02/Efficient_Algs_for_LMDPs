@@ -6,13 +6,14 @@ import frameworks
 from scipy.sparse import csr_matrix, isspmatrix_csr
 
 class MDP:
-    def __init__(self, n_states, n_terminal_states, n_actions):
+    def __init__(self, n_states, n_terminal_states, n_actions, gamma = 0.95):
         self.n_states = n_states
         self.n_nonterminal_states = n_states - n_terminal_states
         self.n_actions = n_actions
         self.P = np.zeros((self.n_nonterminal_states, n_actions, n_states))
         self.R = np.zeros((n_states, n_actions)) # Assuming terminal states are at the end of the state space
         self.s0 = 0
+        self.gamma = gamma
 
     def act(self, current_state, action):
         """Transition function."""
@@ -22,8 +23,10 @@ class MDP:
         terminal = next_state >= self.n_nonterminal_states
         return next_state, reward, terminal
     
-    def value_iteration(self, epsilon=1e-10, gamma = 0.95):
+    def value_iteration(self, epsilon=1e-10, gamma = None):
         """Value iteration algorithm."""
+
+        gamma = self.gamma if gamma is None else gamma
 
         Q = np.zeros((self.n_states, self.n_actions))
         V_diff = np.arange(self.n_states)
@@ -40,14 +43,17 @@ class MDP:
             Q = TQ
             n_steps += 1
 
-        greedy_policy = np.argmax(Q, axis=1)
+        policy = np.argmax(Q, axis=1)
 
-        return Q, greedy_policy, n_steps
+        return Q, policy, n_steps
     
-    def shortest_path_length(self, policy, s=0):
-        """Compute the shortest path length from a given state to a terminal state.
-        :param policy: The policy to follow.
+    def shortest_path_length(self, s = None):
+        """Compute the shortest optimal path length from a given state to a terminal state.
         :param s: The starting state. """
+
+        s = self.s0 if s is None else s
+
+        _, policy, _ = self.value_iteration()
 
         done = s >= self.n_nonterminal_states
         n_steps = 0
@@ -56,11 +62,13 @@ class MDP:
             n_steps += 1
         return n_steps
 
-    def embedding_to_LMDP(self, lmbda = 1):
+    def embedding_to_LMDP(self, lmbda = 1, gamma = None):
         """Embed the MDP into an LMDP."""
 
+        gamma = self.gamma if gamma is None else gamma
+
         # Compute the value function of the original MDP without discounting
-        Q, _, _ = self.value_iteration(gamma=1)
+        Q, _, _ = self.value_iteration(gamma=gamma)
         V = Q.max(axis=1)
 
         # Create the LMDP
