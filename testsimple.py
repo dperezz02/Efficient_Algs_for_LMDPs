@@ -1,4 +1,4 @@
-from frameworks.simplegrid import SimpleGrid, SimpleGrid_MDP
+from environments.simplegrid import SimpleGrid, SimpleGrid_MDP
 from utils.plot import Plotter, Minigrid_MDP_Plotter
 import numpy as np
 import time

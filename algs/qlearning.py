@@ -76,7 +76,6 @@ def Qlearning_training(qlearning, n_steps=int(5e5)):
     tt = 0
     l0 = 0
     s0 = qlearning.mdp.s0
-    opt_paths = list(qlearning.mdp.shortest_path_length(s) for s in range(qlearning.mdp.n_states)) if qlearning.reset_randomness != 0 else None
     lengths = []
     cumulative_reward = 0
     throughputs = np.zeros(n_steps)
@@ -91,9 +90,9 @@ def Qlearning_training(qlearning, n_steps=int(5e5)):
         tt +=1
 
         if qlearning.episode_end:
-            lengths.append((tt-l0)) if qlearning.reset_randomness == 0 else lengths.append((tt-l0)/opt_paths[s0])
+            lengths.append((tt-l0))
             cumulative_reward = cumulative_reward if qlearning.at_goal else cumulative_reward + np.min(qlearning.mdp.R[qlearning.state])
-            throughputs[l0:tt] = cumulative_reward if qlearning.reset_randomness == 0 else cumulative_reward*opt_paths[s0]/(tt-l0)
+            throughputs[l0:tt] = cumulative_reward 
             l0 = tt
             s0 = qlearning.state
             cumulative_reward = 0

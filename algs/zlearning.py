@@ -64,7 +64,6 @@ def Zlearning_training(zlearning: ZLearning, n_steps = int(5e5)):
     tt = 0
     l0 = 0
     s0 = zlearning.lmdp.s0
-    opt_paths = list(zlearning.lmdp.shortest_path_length(s) for s in range(zlearning.lmdp.n_states)) if zlearning.reset_randomness != 0 else None
     z_lengths = []
     cumulative_reward = 0
     z_throughputs = np.zeros(n_steps)
@@ -78,9 +77,9 @@ def Zlearning_training(zlearning: ZLearning, n_steps = int(5e5)):
         tt += 1
 
         if zlearning.episode_end:
-            z_lengths.append(tt-l0)  if zlearning.reset_randomness == 0 else z_lengths.append((tt-l0)/opt_paths[s0]) 
+            z_lengths.append(tt-l0)
             cumulative_reward = cumulative_reward if zlearning.at_goal else cumulative_reward + np.min(zlearning.mdp.R[zlearning.state])
-            z_throughputs[l0:tt] = cumulative_reward if zlearning.reset_randomness == 0 else cumulative_reward*opt_paths[s0]/(tt-l0)
+            z_throughputs[l0:tt] = cumulative_reward
             l0 = tt
             s0 = zlearning.state
             cumulative_reward = 0

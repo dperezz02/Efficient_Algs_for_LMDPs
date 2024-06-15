@@ -1,5 +1,5 @@
-from frameworks.mdp import Minigrid_MDP
-from frameworks.lmdp import Minigrid
+from environments.minigrids import Minigrid_LMDP, Minigrid_MDP
+from environments.blackjack import Black_Jack_MDP
 import numpy as np
 import time
 from utils.plot import Plotter, Minigrid_MDP_Plotter
@@ -8,6 +8,10 @@ from algs.qlearning import QLearning, Qlearning_training
 from utils.lmdp_plot import Minigrid_LMDP_Plotter
 from scipy.sparse import csr_matrix
 import cProfile
+
+
+import gymnasium as gym
+import matplotlib.pyplot as plt
 
 if __name__ == "__main__":
     
@@ -113,6 +117,20 @@ if __name__ == "__main__":
         "######################"
     ]
 
+    black_jack = Black_Jack_MDP()
+    black_jack_mdp_plots = Minigrid_MDP_Plotter(black_jack)
+    # with open("P_blackjack.txt", "w") as f: # Print the transition matrix from power iteration
+    #     for s in black_jack.states:
+    #         sum, dealer, ace, player, dealer_ace = s
+    #         if not black_jack._is_terminal(s):
+    #             for s2 in black_jack.states:
+    #                 if black_jack.P[black_jack.state_to_index[s], 0, black_jack.state_to_index[s2]] != 0 or black_jack.P[black_jack.state_to_index[s], 1, black_jack.state_to_index[s2]] != 0:
+    #                     sum2, dealer2, ace2, player2, dealer_ace2 = s2
+    #                     f.write("P[{},{},{},{},{}][{},{},{},{},{}]: {}\n".format(sum, dealer, ace, player, dealer_ace, sum2, dealer2, ace2, player2, dealer_ace2, black_jack.P[black_jack.state_to_index[s], :, black_jack.state_to_index[s2]]))
+    Q, opt_policy, n_steps = black_jack.value_iteration(epsilon=1e-10, gamma=1)
+    black_jack_mdp_plots.plot_value_function(Q, print_values=True, file = "black_jack_value_function.txt")
+    #black_jack.play(opt_policy)
+
     grid_map = None
     grid_size = len(grid_map)-2 if grid_map is not None else grid_size
 
@@ -124,20 +142,20 @@ if __name__ == "__main__":
     # MDP
     minigrid_mdp = Minigrid_MDP(grid_size=grid_size, objects=objects, map=grid_map, gamma=gamma)
     minigrid_mdp_plots = Minigrid_MDP_Plotter(minigrid_mdp)
-    minigrid_mdp.render()
+    #minigrid_mdp.render()
 
-    Q, opt_policy, n_steps = minigrid_mdp.value_iteration(epsilon=1e-10, gamma=gamma)
-    minigrid_mdp_plots.plot_value_function(Q, print_values=True, file = "value_function.txt")
-    minigrid_mdp_plots.plot_path(opt_policy, path = 'videos\MDP_value_iteration_path.gif')
+    # Q, opt_policy, n_steps = minigrid_mdp.value_iteration(epsilon=1e-10, gamma=gamma)
+    # minigrid_mdp_plots.plot_value_function(Q, print_values=True, file = "value_function.txt")
+    # minigrid_mdp_plots.plot_path(opt_policy, path = 'videos\MDP_value_iteration_path.gif')
 
 
     # Q-learning
     print("Q-learning training...")
-    qlearning = QLearning(minigrid_mdp, gamma=gamma, epsilon=1, epsilon_decay=0.995, epsilon_min = 0, c = 200, reset_randomness = 0)
+    qlearning = QLearning(black_jack, gamma=gamma, epsilon=1, epsilon_decay=0.995, epsilon_min = 0, c = 200, reset_randomness = 1)
     Q_est, est_policy, lengths, throughputs = Qlearning_training(qlearning, n_steps=n_iters)
     # #plot_greedy_policy(est_policy, minigrid_mdp, print_policy=True, estimated=True)
     minigrid_mdp_plots.plot_value_function(Q_est, print_values=True, file = "QLearning_value_function.txt")
-    minigrid_mdp_plots.plot_path(est_policy, path = 'videos\MDP_QLearning_path.gif')
+    #minigrid_mdp_plots.plot_path(est_policy, path = 'videos\MDP_QLearning_path.gif')
     # # print(opt_policy - est_policy)
     print("Total Square Error: ", np.sum(np.square(Q-Q_est)))
     # with open("Q_error.txt", "w") as f: # Print the transition matrix from power iteration
@@ -150,10 +168,10 @@ if __name__ == "__main__":
     with open("nsa.txt", "w") as f: # Print the transition matrix from power iteration
         for i in range(minigrid_mdp.n_states):
             f.write("Nsa[{}]: {}\n".format(minigrid_mdp.states[i], qlearning.Nsa[i]))
-    q_averaged_throughputs = minigrid_mdp_plots.plot_episode_throughput(throughputs, minigrid_mdp.shortest_path_length())
+    q_averaged_throughputs = minigrid_mdp_plots.plot_episode_throughput(throughputs)#, minigrid_mdp.shortest_path_length())
 
     # LMDP
-    minigrid = Minigrid(grid_size=grid_size, objects=objects, map=grid_map, lmbda=lmbda)
+    minigrid = Minigrid_LMDP(grid_size=grid_size, objects=objects, map=grid_map, lmbda=lmbda)
     minigrid_plots = Minigrid_LMDP_Plotter(minigrid)
 
     # Power Iteration 
@@ -175,23 +193,23 @@ if __name__ == "__main__":
     # Z-Learning 
     print("Z-learning training...")
     zlearning = ZLearning(minigrid, lmbda=1, c = 200)
-    # start_time = time.time()
-    # Z_est, z_lengths, z_throughputs = Zlearning_training(zlearning, n_steps=n_iters)
-    # print("--- %s minutes and %s seconds ---" % (int((time.time() - start_time)/60), int((time.time() - start_time) % 60)))
-    # z_averaged_throughputs = minigrid_mdp_plots.plot_episode_throughput(z_throughputs, minigrid_mdp.shortest_path_length())
-    # with open("PU_Z_learning.txt", "w") as f: # Print the transition matrix from power iteration
-    #     for i in range(minigrid.n_nonterminal_states):
-    #         for j in zlearning.Pu[i].indices:
-    #                 if zlearning.Pu[i,j] != 0: f.write("Pu[{}][{}]: {}\n".format(minigrid.states[i], minigrid.states[j], zlearning.Pu[i,j])) 
-    # print("Mean Absolute Error Pu: ", np.sum(np.abs(PU-zlearning.Pu))) 
-    # # # print("Mean Absolute Z Error: ", np.sum(np.abs(Z-Z_est[-1]))/np.sum(np.abs(Z))) # Normalized error
-    # # # minigrid_plots.show_Z(Z_est[-1], print_Z=True, plot_Z = False, file = "Z_function_zlearning.txt")
-    # with open("Pu_error.txt", "w") as f: # Print the transition matrix from power iteration
-    #     for i in range(minigrid.n_nonterminal_states):
-    #         for j in zlearning.Pu[i].indices:
-    #             f.write("Pu[{}][{}] error: {}\n".format(minigrid.states[i], minigrid.states[j], PU[i,j]- zlearning.Pu[i,j]))
-    # minigrid_plots.plot_sample_path(PU, path = 'videos\LMDP_ZLearning_path.gif')
-    # minigrid_mdp_plots.plot_throughput([throughputs, z_throughputs], minigrid_mdp.grid_size, ["Q-Learning", "Z-Learning"])
+    start_time = time.time()
+    Z_est, z_lengths, z_throughputs = Zlearning_training(zlearning, n_steps=n_iters)
+    print("--- %s minutes and %s seconds ---" % (int((time.time() - start_time)/60), int((time.time() - start_time) % 60)))
+    z_averaged_throughputs = minigrid_mdp_plots.plot_episode_throughput(z_throughputs, minigrid_mdp.shortest_path_length())
+    with open("PU_Z_learning.txt", "w") as f: # Print the transition matrix from power iteration
+        for i in range(minigrid.n_nonterminal_states):
+            for j in zlearning.Pu[i].indices:
+                    if zlearning.Pu[i,j] != 0: f.write("Pu[{}][{}]: {}\n".format(minigrid.states[i], minigrid.states[j], zlearning.Pu[i,j])) 
+    print("Mean Absolute Error Pu: ", np.sum(np.abs(PU-zlearning.Pu))) 
+    # # print("Mean Absolute Z Error: ", np.sum(np.abs(Z-Z_est[-1]))/np.sum(np.abs(Z))) # Normalized error
+    # # minigrid_plots.show_Z(Z_est[-1], print_Z=True, plot_Z = False, file = "Z_function_zlearning.txt")
+    with open("Pu_error.txt", "w") as f: # Print the transition matrix from power iteration
+        for i in range(minigrid.n_nonterminal_states):
+            for j in zlearning.Pu[i].indices:
+                f.write("Pu[{}][{}] error: {}\n".format(minigrid.states[i], minigrid.states[j], PU[i,j]- zlearning.Pu[i,j]))
+    minigrid_plots.plot_sample_path(PU, path = 'videos\LMDP_ZLearning_path.gif')
+    minigrid_mdp_plots.plot_throughput([throughputs, z_throughputs], minigrid_mdp.grid_size, ["Q-Learning", "Z-Learning"])
 
     #Use prophiler for Zlearning_trainnig
-    cProfile.run('Zlearning_training(zlearning, n_steps=int(1e5))', sort='tottime')
+    cProfile.run('Zlearning_training(zlearning, n_steps=int(5e5))', sort='tottime')
