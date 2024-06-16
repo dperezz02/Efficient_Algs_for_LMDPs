@@ -85,7 +85,7 @@ class LMDP:
         row_indices = np.repeat(np.arange(Pu.shape[0]), np.diff(Pu.indptr))
         log_ratio = np.log(Pu.data / P0[row_indices, Pu.indices])
         product = Pu.data * log_ratio
-        mdp.R = self.R - lmbda * np.concatenate((np.bincount(row_indices, weights=product), self.R[self.n_nonterminal_states:]))
+        mdp.R = self.R - lmbda * np.concatenate((np.bincount(row_indices, weights=product), np.zeros(self.n_states-self.n_nonterminal_states)))
         mdp.R = np.broadcast_to(mdp.R.reshape(-1, 1), (self.n_states, n_actions))
 
         # Compute the transition probabilities

@@ -184,7 +184,8 @@ class Minigrid_MDP(MDP):
 
         lmdp, embedding_rmse = super().embedding_to_LMDP()
         dynamics = {'P0': lmdp.P0, 'R': lmdp.R}
-        lmdp_minigrid = Minigrid_LMDP(self.grid_size, walls = self.env.walls, dynamics = dynamics)
+        objects = {'walls': self.env.walls, 'lavas': self.env.lavas}
+        lmdp_minigrid = Minigrid_LMDP(self.grid_size, map=self.env.map, objects=objects, dynamics = dynamics)
         return lmdp_minigrid, embedding_rmse
 
     # Auxiliary Methods
@@ -367,7 +368,8 @@ class Minigrid_LMDP(LMDP):
 
         mdp, embedding_mse = super().embedding_to_MDP()
         dynamics = {'P': mdp.P, 'R': mdp.R}
-        mdp_minigrid = Minigrid_MDP(self.grid_size, walls = self.env.walls, dynamics = dynamics)
+        objects = {'walls': self.env.walls, 'lavas': self.env.lavas}
+        mdp_minigrid = Minigrid_MDP(self.grid_size, map=self.env.map, objects=objects, dynamics = dynamics)
         return mdp_minigrid, embedding_mse
     
     # Auxiliary Methods

@@ -1,5 +1,5 @@
-from frameworks.mdp import Minigrid_MDP
-from frameworks.lmdp import Minigrid
+from environments.minigrids import Minigrid_LMDP, Minigrid_MDP
+from environments.simplegrid import SimpleGrid_LMDP, SimpleGrid_MDP
 import numpy as np
 import time
 from utils.plot import Plotter, Minigrid_MDP_Plotter
@@ -10,16 +10,16 @@ from scipy.sparse import csr_matrix
 
 if __name__ == "__main__":
 
-    grid_size = 15
-    walls = []#(14,1), (1,8), (5, 5), (12, 5), (8, 7), (2,5), (3,5), (4,5), (6,5), (7,5), (8,5), (9,5), (10,5), (11,5), (13,5), (15,9)]
+    grid_size = 10
+    #walls = [(14,1), (1,8), (5, 5), (12, 5), (8, 7), (2,5), (3,5), (4,5), (6,5), (7,5), (8,5), (9,5), (10,5), (11,5), (13,5), (15,9)]
     
     # MDP
-    minigrid_mdp = Minigrid_MDP(grid_size=grid_size, walls = walls)
+    minigrid_mdp = SimpleGrid_MDP(grid_size)
     minigrid_mdp_plots = Minigrid_MDP_Plotter(minigrid_mdp)
 
     gamma = 1
     epsilon = 1e-10
-    n_iters = int(1e6)
+    n_iters = int(5e4)
     lmbda = 1
 
     # Value Iteration MDP
@@ -27,12 +27,21 @@ if __name__ == "__main__":
     V = np.max(Q, axis=1)
     
     # LMDP
-    minigrid = Minigrid(grid_size=grid_size, walls=walls)
+    minigrid = Minigrid_LMDP(grid_size=grid_size)
     minigrid_plots = Minigrid_LMDP_Plotter(minigrid)
+    minigrid = SimpleGrid_LMDP(grid_size)
+
+    walls = [(14,1), (1,8), (5, 5), (12, 5), (8, 7), (2,5), (3,5), (4,5), (6,5), (7,5), (8,5), (9,5), (10,5), (11,5), (13,5), (15,9)]
+    lavas = [(7,1), (1,4), (14,14)]
+
+    Z, n_steps = minigrid.power_iteration(lmbda = lmbda, epsilon=epsilon)
+    V = minigrid.Z_to_V(Z)
+    minigrid_plots.plot_grid(minigrid, grid_size, V, walls=walls, lavas=lavas)
+    #V = minigrid.Z_to_V(Z)
 
     # Embedded MDP
-    mdp_minigrid, _ = minigrid.embedding_to_MDP()
-    minigrid_mdp_embedded_plots = Minigrid_MDP_Plotter(mdp_minigrid)
+    #mdp_minigrid, _ = minigrid.embedding_to_MDP()
+    #minigrid_mdp_embedded_plots = Minigrid_MDP_Plotter(mdp_minigrid)
     # Q2, opt_policy2, n_steps = mdp_minigrid.value_iteration(epsilon, gamma)
     # V2 = np.max(Q2, axis=1)
 
@@ -44,29 +53,35 @@ if __name__ == "__main__":
     # print(throughputs[-1])
 
 
-    c_values = [100, 150, 200, 250, 300]
+    c_values = [200, 500, 1000, 10000, 100000, 1000000]
 
-    q_throughputs = []
-    q_names = []
+    throughputs = []
+    throughputs2 = []
+    z_names = []
     v_errors = []
     v_mses = []
     q_policy_differences = []
 
     for c in c_values:
-        qlearning = QLearning(minigrid_mdp, gamma=gamma, epsilon=1, epsilon_decay=0.9995, epsilon_min = 0, c = c)
-        Q_est, est_policy, _, throughputs = Qlearning_training(qlearning, n_steps=n_iters)
-        V_est = np.max(Q_est, axis=1)
-        q_throughputs.append(throughputs)
-        q_names.append('C: ' + str(c))
+        #qlearning = QLearning(minigrid_mdp, gamma=gamma, epsilon=1, epsilon_decay=0.9995, epsilon_min = 0, c = c)
+        zlearning = ZLearning(minigrid, lmbda=lmbda, c=c)
+        #Q_est, est_policy, q_throughputs2, q_throughputs = Qlearning_training(qlearning, n_steps=n_iters)
+        #V_est = np.max(Q_est, axis=1)
+        Z_est, z_throughputs2, z_throughputs = Zlearning_training(zlearning, n_steps=n_iters)
+        V_est = minigrid.Z_to_V(Z_est)
+        throughputs.append(z_throughputs)
+        throughputs2.append(z_throughputs2)
+        z_names.append('C: ' + str(c))
         v_errors.append(np.max(np.abs(V - V_est))/np.max(np.abs(V)))
         v_mses.append(np.mean(np.square(V - V_est)))
-        q_policy_differences.append(np.sum(opt_policy != est_policy))
+        #q_policy_differences.append(np.sum(opt_policy != est_policy))
 
 
-    minigrid_mdp_embedded_plots.plot_throughput(q_throughputs, minigrid.grid_size, names = q_names, save_path='plots\Q_embedded_c')
-    minigrid_mdp_embedded_plots.plot_value_per_hyperparameter(v_errors, c_values, title = 'Value Function Approximation Error by Learning Rate', xlabel = 'C', ylabel = 'Approximation Error', save_path = 'plots\Q_embedded_c_error')
-    minigrid_mdp_embedded_plots.plot_value_per_hyperparameter(v_mses, c_values, title = 'Value Function MSE Error by Learning Rate', xlabel = 'C', ylabel = 'Mean Squared Errpr', save_path = 'plots\Q_embedded_c_mse')
-    minigrid_mdp_embedded_plots.plot_value_per_hyperparameter(q_policy_differences, c_values, title = 'Policy Differences by Learning Rate', xlabel = 'C', ylabel = 'Policy Differences', save_path = 'plots\Q_embedded_c_policy_difference')
+    minigrid_plots.plot_throughput(throughputs2, grid_size, names = z_names, smooth_window=10000, save_path='plots\Z_c_throughputs')
+    minigrid_plots.plot_throughput(throughputs, grid_size, names = z_names, smooth_window=10000, save_path='plots\Z_c')
+    minigrid_plots.plot_value_per_hyperparameter(v_errors, c_values, title = 'Value Function Approximation Error by Learning Rate in Z-learning', xlabel = 'C', ylabel = 'Approximation Error', save_path = 'plots\Z_c_error')
+    minigrid_plots.plot_value_per_hyperparameter(v_mses, c_values, title = 'Value Function MSE Error by Learning Rate in Z-learning', xlabel = 'C', ylabel = 'Mean Squared Errpr', save_path = 'plots\Z_c_mse')
+    #minigrid_mdp_embedded_plots.plot_value_per_hyperparameter(q_policy_differences, c_values, title = 'Policy Differences by Learning Rate', xlabel = 'C', ylabel = 'Policy Differences', save_path = 'plots\Q_embedded_c_policy_difference')
 
     # epsilon_decays = [0.9995, 0.999, 0.995, 0.99]
     # q_throughputs = []

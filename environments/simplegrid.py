@@ -2,11 +2,11 @@ import numpy as np
 from frameworks.lmdp import LMDP
 from frameworks.mdp import MDP
 
-class SimpleGrid(LMDP):
+class SimpleGrid_LMDP(LMDP):
 
     def __init__(self, size = 2):
         super().__init__(size * size, 1)
-        self.T = [size * size - 1]
+        self.states = []
         
         # construct transition probabilities
         for x in range(size):
@@ -29,17 +29,22 @@ class SimpleGrid(LMDP):
                         self.P0[state][x * size + y + 1] += 1
                     else:
                         self.P0[state][state] += 1
+                    self.states.append((x, y))
 
                     self.P0[state][:] /= np.sum(self.P0[state])
 
         # construct reward function
         self.R[0:self.n_nonterminal_states] = -1
 
+        self.states.append((size - 1, size - 1))
+
+        self.state_to_index = {state: index for index, state in enumerate(self.states)}
+
 class SimpleGrid_MDP(MDP):
 
     def __init__(self, size = 2):
         super().__init__(size * size, 1, 4)
-        self.T = [size * size - 1]
+        self.states = []
         
         # construct transition probabilities
         for x in range(size):
@@ -65,3 +70,7 @@ class SimpleGrid_MDP(MDP):
 
         # construct reward function
         self.R[0:self.n_nonterminal_states][:] = -1
+
+        self.states.append((size - 1, size - 1))
+
+        self.state_to_index = {state: index for index, state in enumerate(self.states)}

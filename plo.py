@@ -7,7 +7,7 @@ grid_size = (10, 10)
 
 # Initialize the grid for the number of transitions
 transitions = np.full(grid_size, 4, dtype=int)  # Default to 4 transitions
-
+print(transitions.shape)
 # Define wall positions (blocked positions)
 blocked_positions = [
     (0, 4), (0, 5), (0, 6), (0, 7), (1, 6), (1, 7), (2, 5),

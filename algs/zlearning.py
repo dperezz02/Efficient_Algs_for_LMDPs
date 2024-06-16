@@ -10,7 +10,7 @@ class ZLearning:
     """
     Implements Z-learning algorithm
     """
-    def __init__(self, lmdp, lmbda=1, c = 1, reset_randomness = 0.0):
+    def __init__(self, lmdp, lmbda=1, c = 1, reset_randomness = 0.0, naive = False):
         self.lmdp = lmdp
         self.lmbda = lmbda
         self.learning_rate = 1
@@ -18,21 +18,25 @@ class ZLearning:
         self.n_episodes = 0
         self.Z = np.ones(lmdp.n_states)
         self.Z[self.lmdp.n_nonterminal_states:] = np.exp(self.lmdp.R[self.lmdp.n_nonterminal_states:] / lmbda)
+        self.P0 = self.lmdp.P0
         self.Pu = self.lmdp.P0
         self.reset_randomness = reset_randomness
         self.state = self.lmdp.s0
         self.r = 0
         self.episode_end = False
         self.at_goal = False
+        self.naive = naive
 
 
-    def get_Z(self, r, x):
+    def get_Z(self, r, x, y):
         """
         :param r: reward of current state
         :param x: current state (in index format)
+        :param y: next state (in index format)
         :return: Delta update
         """
-        Gz = self.lmdp.P0[x].dot(self.Z)
+
+        Gz = self.Z[y] if self.naive else self.lmdp.P0[x].dot(self.Z)
 
         zjk = np.exp(r / self.lmbda) * Gz
 
@@ -40,9 +44,13 @@ class ZLearning:
 
     def step(self):
 
+        # Sample next state
+        next_state, _ , self.episode_end = self.lmdp.act(self.state, self.Pu) if not self.naive else self.lmdp.act(self.state, self.P0)
+        self.at_goal = self.episode_end
+
         # Get Delta
         self.r = self.lmdp.R[self.state]
-        delta = self.get_Z(self.r, self.state)
+        delta = self.get_Z(self.r, self.state, next_state)
 
         # Update Z
         self.Z[self.state] += self.learning_rate * delta
@@ -50,9 +58,8 @@ class ZLearning:
         # Compute Pu
         self.Pu = self.lmdp.compute_Pu(self.Z)
 
-        # Sample next state
-        self.state, _ , self.episode_end = self.lmdp.act(self.state, self.Pu)
-        self.at_goal = self.episode_end
+        # Update state
+        self.state = next_state
 
         if self.episode_end:
             self.n_episodes += 1
@@ -67,12 +74,12 @@ def Zlearning_training(zlearning: ZLearning, n_steps = int(5e5)):
     z_lengths = []
     cumulative_reward = 0
     z_throughputs = np.zeros(n_steps)
+    z_throughputs2 = np.zeros(n_steps)
 
-    Z_est = np.zeros((n_steps, zlearning.lmdp.n_states))
+    #Z_est = np.zeros(zlearning.lmdp.n_states)
     start_time = time.time()
     while tt < n_steps:
         zlearning.step()
-        Z_est[tt, :] = zlearning.Z
         cumulative_reward += zlearning.r
         tt += 1
 
@@ -80,6 +87,8 @@ def Zlearning_training(zlearning: ZLearning, n_steps = int(5e5)):
             z_lengths.append(tt-l0)
             cumulative_reward = cumulative_reward if zlearning.at_goal else cumulative_reward + np.min(zlearning.mdp.R[zlearning.state])
             z_throughputs[l0:tt] = cumulative_reward
+            throughput = 1 if zlearning.at_goal else 0 
+            z_throughputs2[l0:tt] = throughput/(tt-l0)
             l0 = tt
             s0 = zlearning.state
             cumulative_reward = 0
@@ -93,8 +102,8 @@ def Zlearning_training(zlearning: ZLearning, n_steps = int(5e5)):
             print(f"Step: {tt}/{n_steps}, Time: {elapsed_time/60:.2f}m, ETA: {estimated_remaining_time/60:.2f}m")
 
 
-    if l0 != tt: z_throughputs[l0:tt] = z_throughputs[l0-1]
+    if l0 != tt: z_throughputs2[l0:tt] = z_throughputs2[l0-1]
 
     zlearning.Pu = zlearning.lmdp.compute_Pu(zlearning.Z)
 
-    return Z_est, z_lengths, z_throughputs
+    return zlearning.Z, z_throughputs2, z_throughputs

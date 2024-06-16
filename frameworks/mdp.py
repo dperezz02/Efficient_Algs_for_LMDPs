@@ -85,7 +85,7 @@ class MDP:
             row_indices = np.repeat(np.arange(Pu.shape[0]), np.diff(Pu.indptr))
             log_ratio = np.log(Pu.data / lmdp.P0[row_indices, Pu.indices])
             product = Pu.data * log_ratio
-            R = np.sum(self.R, axis = 1)/self.n_actions + lmbda * np.concatenate((np.bincount(row_indices, weights=product), lmdp.R[self.n_nonterminal_states:]))
+            R = np.sum(self.R, axis = 1)/self.n_actions + lmbda * np.concatenate((np.bincount(row_indices, weights=product), np.zeros(self.n_states-self.n_nonterminal_states)))
 
             K_min = 0
             K_max = 1
