@@ -31,6 +31,7 @@ class LMDP:
 
         P0 = self.P0 if isspmatrix_csr(self.P0) else csr_matrix(self.P0)
         
+        #Z = np.concatenate((np.ones(self.n_nonterminal_states), np.exp(self.R[self.n_nonterminal_states:] / lmbda)))
         Z = np.ones(self.n_states)
         V_diff = np.arange(self.n_states)
         n_steps = 0

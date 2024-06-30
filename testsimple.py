@@ -1,22 +1,22 @@
-from environments.simplegrid import SimpleGrid, SimpleGrid_MDP
+from environments.simplegrid import SimpleGrid_LMDP, SimpleGrid_MDP
 from utils.plot import Plotter, Minigrid_MDP_Plotter
 import numpy as np
 import time
 
 if __name__ == "__main__":
-    grid_size = 2
+    grid_size = 15
 
-    g = SimpleGrid(grid_size)
+    g = SimpleGrid_LMDP(grid_size)
     # Z, nsteps = g.power_iteration(1, 1e-10)
     # #print(Z)
     # #print(g.Z_to_V(Z))
     # Pu = g.compute_Pu(Z)
 
-    #mdp_minigrid, embedding_mse = g.embedding_to_MDP()
-    #print("Embedding Mean Squared Error: ", embedding_mse)
+    mdp_minigrid, embedding_mse = g.embedding_to_MDP()
+    print("Embedding Mean Squared Error: ", embedding_mse)
 
-    #lmdp, embedding_mse = mdp_minigrid.embedding_to_LMDP()
-    #print("Embedding Mean Squared Error: ", embedding_mse)
+    lmdp, embedding_mse = mdp_minigrid.embedding_to_LMDP()
+    print("Embedding Mean Squared Error: ", embedding_mse)
     #print(lmdp.R)
 
     #Z, nsteps = lmdp.power_iteration(1, 1e-10)
@@ -38,8 +38,10 @@ if __name__ == "__main__":
     # #print(Q.max(axis=1))
     # print("Total embedding error (LMDP -> MDP): ", np.sum(np.abs(lmdp2.Z_to_V(Z) - Q.max(axis=1))))
 
-    # mdp = SimpleGrid_MDP(grid_size)
+    mdp = SimpleGrid_MDP(grid_size)
     # minigrid_mdp_plots = Minigrid_MDP_Plotter(mdp)
+    lmdp, error = mdp.embedding_to_LMDP()
+    print("Embedding Mean Squared Error: ", error)
 
     # mdp_minigrid2, embedding_mse = g.embedding_to_MDP()
     # print("Total embedding error (LMDP -> MDP): ", embedding_mse)

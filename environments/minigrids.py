@@ -27,7 +27,7 @@ class Minigrid_MDP(MDP):
         self.grid_size = grid_size
         self.n_orientations = 4
         self.actions = list(range(3))
-        self.J = {"goal": 0, "lava": -grid_size*grid_size} # Determine reward function for terminal states
+        self.J = {"goal": 0, "lava": -grid_size*6} # Determine reward function for terminal states
         n_states, n_terminal_states = self._create_environment(grid_size, objects, map=map)
 
         super().__init__(n_states = n_states, n_terminal_states = n_terminal_states, n_actions = len(self.actions), gamma = gamma, s0 = self.s0)
@@ -218,7 +218,7 @@ class Minigrid_LMDP(LMDP):
 
         self.grid_size = grid_size
         self.n_orientations = 4
-        self.J = {"goal": 0, "lava": -grid_size*grid_size} # Determine reward function for terminal states
+        self.J = {"goal": 0, "lava": -grid_size*6} # Determine reward function for terminal states
         n_states, n_terminal_states = self._create_environment(grid_size, objects, map=map)
         
         super().__init__(n_states = n_states, n_terminal_states = n_terminal_states, lmbda=lmbda, s0=self.s0)

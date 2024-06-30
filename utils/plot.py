@@ -52,16 +52,6 @@ class Plotter:
         
 
             
-        #ax = sns.lineplot(data=df, x='index', y='rewards', hue='name', style='name', markers=True, alpha=0.2, legend=False)
-        #ax = sns.lineplot(data=df, x='index', y='smoothed_rewards', hue='name', style='name', markers=True, dashes=False, ci=None)
-
-        # linestyles = ['-', '--', '-.']
-        # colors = ['r', 'b', 'k']  # Red, blue, black
-
-        # for i, name in enumerate(names):
-        #     sns.lineplot(data=df[df['name'] == name], x='index', y='rewards', color=colors[i], alpha=0.2, legend=False)
-        #     sns.lineplot(data=df[df['name'] == name], x='index', y='smoothed_rewards', color=colors[i], linestyle=linestyles[i], label=name)
-        
         ax = plt.gca()
         ax.set(xlabel="Time Step", ylabel="Episodic Throughput")
         legend = plt.legend(loc='upper right', fontsize=12)
@@ -73,7 +63,7 @@ class Plotter:
         plt.show()
         plt.clf()
 
-    def plot_rewards(self, rewards, grid_size, names, smooth_window = 10000, save_path = 'plots\'', title="Episodic Reward in Minigrid "):
+    def plot_rewards(self, rewards, grid_size, names, smooth_window_initial=1, smooth_window_later=2000, save_path='plots/', title="Episodic Reward in Minigrid "):
         df = pd.DataFrame()
         for i in range(len(names)):
             temp_df = pd.DataFrame()
@@ -81,10 +71,16 @@ class Plotter:
             temp_df['index'] = range(len(rewards[i]))
             temp_df['name'] = names[i]
             df = pd.concat([df, temp_df.reset_index(drop=True)], ignore_index=True)
-        
-         # Calculate rolling mean and standard deviation
-        df['smoothed_rewards'] = df.groupby('name')['rewards'].transform(lambda x: x.rolling(window=smooth_window, min_periods=1, center=True).mean())
-        df['smoothed_std'] = df.groupby('name')['rewards'].transform(lambda x: x.rolling(window=smooth_window, min_periods=1, center=True).std())
+
+        def combined_smoothing(x, transition_point):
+            smoothed = np.empty_like(x)
+            smoothed[:transition_point] = x[:transition_point].rolling(window=smooth_window_initial, min_periods=1, center=False).mean()
+            smoothed[transition_point:] = x[transition_point:].rolling(window=smooth_window_later, min_periods=1, center=True).mean()
+            return smoothed
+
+        # Calculate rolling mean and standard deviation using combined smoothing
+        df['smoothed_rewards'] = df.groupby('name')['rewards'].transform(lambda x: combined_smoothing(x, smooth_window_later-500))
+        df['smoothed_std'] = df.groupby('name')['rewards'].transform(lambda x: x.rolling(window=smooth_window_later, min_periods=1, center=True).std())
 
         plt.figure(figsize=(8, 6))
 
@@ -93,22 +89,78 @@ class Plotter:
             plt.plot(subset['index'], subset['smoothed_rewards'], label=name)
             max_val = subset['smoothed_rewards'].max()
             min_val = subset['smoothed_rewards'].min()
-            
+
             # Clip the upper and lower bounds of the confidence interval to the max and min values
             upper_bound = np.clip(subset['smoothed_rewards'] + subset['smoothed_std'], min_val, max_val)
             lower_bound = np.clip(subset['smoothed_rewards'] - subset['smoothed_std'], min_val, max_val)
-            
+
             plt.fill_between(subset['index'], lower_bound, upper_bound, alpha=0.2)
-        
+
         ax = plt.gca()
-        ax.set(xlabel="Time Step", ylabel="Episodic Reward")
+        ax.set(xlabel="Time Step", ylabel="Episodic Reward (log scale)")
         plt.yscale('symlog')
         legend = plt.legend(loc='upper right', fontsize=12)
-        legend.get_frame().set_edgecolor('black')  
+        legend.get_frame().set_edgecolor('black')
         plt.title(title)
         plt.grid(True, which="both", ls="--", linewidth=0.5)
         plt.tight_layout()
         plt.savefig(save_path + str(grid_size) + 'rewards.png')
+        plt.show()
+        plt.clf()
+
+    def plot_rewards_and_errors(self, errors, rewards, names, smooth_window_initial=2000, smooth_window_later=2000, save_path='plots/', title="Episodic Reward in Minigrid domain"):
+        # Prepare data for errors
+        df_errors = pd.DataFrame()
+        # Prepare data for rewards
+        df_rewards = pd.DataFrame()
+        for i in range(len(names)):
+            temp_df = pd.DataFrame()
+            temp_df['errors'] = errors[i]
+            temp_df['index'] = range(len(errors[i]))
+            temp_df['name'] = names[i]
+            df_errors = pd.concat([df_errors, temp_df.reset_index(drop=True)], ignore_index=True)
+
+            temp_df2 = pd.DataFrame()
+            temp_df2['rewards'] = rewards[i]
+            temp_df2['index'] = range(len(rewards[i]))
+            temp_df2['name'] = names[i]
+            df_rewards = pd.concat([df_rewards, temp_df2.reset_index(drop=True)], ignore_index=True)
+
+        def combined_smoothing(x, transition_point):
+            smoothed = np.empty_like(x)
+            smoothed[:transition_point] = x[:transition_point].rolling(window=smooth_window_initial, min_periods=1, center=False).mean()
+            smoothed[transition_point:] = x[transition_point:].rolling(window=smooth_window_later, min_periods=1, center=True).mean()
+            return smoothed
+
+        # Calculate rolling mean and standard deviation using combined smoothing
+        df_rewards['smoothed_rewards'] = df_rewards.groupby('name')['rewards'].transform(lambda x: combined_smoothing(x, smooth_window_later-500))
+
+        # Set up the subplots
+        fig, axs = plt.subplots(2, 1, figsize=(6, 8))
+
+        # Plotting errors
+        sns.lineplot(x='index', y='errors', data=df_errors, hue='name', style='name', ax=axs[0])
+        axs[0].set(ylabel="Approximation Error (log scale)")
+        axs[0].set_yscale('log')
+        handles, labels = axs[0].get_legend_handles_labels()
+        new_labels = [label for label in labels]
+        axs[0].legend(handles, new_labels, loc='upper right', fontsize=12).get_frame().set_edgecolor('black')
+        axs[0].set_title(title)
+        axs[0].grid(True, which="both", ls="--", linewidth=0.5)
+        axs[0].set_xlabel("")
+
+        sns.lineplot(x='index', y='smoothed_rewards', data=df_rewards, hue='name', style='name', ax=axs[1])
+        axs[1].set(xlabel="Time Step", ylabel="Episodic Reward (symlog scale)")
+        axs[1].set_yscale('symlog')
+        axs[1].set_ylim([min(df_rewards['smoothed_rewards'].min()-500, 1e-3), max(df_rewards['smoothed_rewards'].max()+5, -10)])  # Adjust y-axis limits here
+        handles, labels = axs[1].get_legend_handles_labels()
+        new_labels = [label for label in labels]
+        axs[1].legend(handles, new_labels, loc='upper right', fontsize=12).get_frame().set_edgecolor('black')
+        #axs[1].legend(loc='upper right', fontsize=12).get_frame().set_edgecolor('black')
+        axs[1].grid(True, which="both", ls="--", linewidth=0.5)
+
+        plt.tight_layout()
+        plt.savefig(save_path + 'rewards_and_errors.png')
         plt.show()
         plt.clf()
 
@@ -162,21 +214,20 @@ class Plotter:
         plt.show()
         plt.clf()
 
-    def plot_values_vs_indices(self, indices, values, names, save_path = 'plots/', scale = None, title="Value Function vs. Number of States"):
+    def plot_mse_vs_grid_size(self, n_states, mse_values, names, save_path = 'plots/'):
         df = pd.DataFrame()
-        for value, name in zip(values, names):
-            temp_df = pd.DataFrame({'indices': indices, 'values': value, 'Method': name})
-            temp_df['values']= temp_df['values'].rolling(window=50000, min_periods=1, center=True).mean()
+        for mse, name in zip(mse_values, names):
+            temp_df = pd.DataFrame({'Number of States': n_states, 'MSE': mse, 'Method': name, 'Name': name})
             df = pd.concat([df, temp_df], ignore_index=True)
         
         plt.figure(figsize=(8, 6))
-        ax = sns.lineplot(data=df, x='indices', y='values', hue='Method', style='Method', markers=True, dashes=False)
+        ax = sns.lineplot(data=df, x='Number of States', y='MSE', hue='Name', style='Method', markers=True, dashes=False)
 
         plt.xlabel('Number of States', fontsize=14)
         plt.ylabel('Mean Squared Error (MSE)', fontsize=14)
-        if scale is not None:
-            plt.yscale(scale)
-        plt.title(title, fontsize=16)
+        #plt.yscale('log')  # Use logarithmic scale for y-axis
+        plt.yscale('log')  # Use logarithmic scale for y-axis
+        plt.title('MSE vs. Number of States for Embedding Approaches', fontsize=16)
         plt.grid(True, which="both", ls="--", linewidth=0.5)
 
         # Customize legend
@@ -184,6 +235,30 @@ class Plotter:
         legend.get_frame().set_edgecolor('black')  
         
         
+        plt.tight_layout()
+        plt.savefig(save_path + 'mse_vs_n_states2.png')
+        plt.show()
+        plt.clf()
+
+    def plot_values_vs_indices(self, indices, values, names, save_path = 'plots/', scale = None, title="Value Function vs. Number of States"):
+        df = pd.DataFrame()
+        for value, name in zip(values, names):
+            temp_df = pd.DataFrame({'indices': indices, 'values': value, 'Method': name})
+            df = pd.concat([df, temp_df], ignore_index=True)
+        
+        plt.figure(figsize=(8, 6))
+        ax = sns.lineplot(data=df, x='indices', y='values', hue='Method', style='Method', markers=False, dashes=False)
+
+        plt.xlabel('Time step', fontsize=14)
+        plt.ylabel('Mean Squared Error (log scale)', fontsize=14)
+        # if scale is not None:
+        #     plt.yscale(scale)
+        plt.title(title, fontsize=16)
+        plt.grid(True, which="both", ls="--", linewidth=0.5)
+
+        # Customize legend
+        legend = plt.legend(loc='upper right', fontsize=12)
+        legend.get_frame().set_edgecolor('black')  
 
         plt.tight_layout()
         plt.savefig(save_path)
@@ -227,8 +302,8 @@ class Plotter:
         if opt_length is not None: 
             plt.axhline(y=-opt_length, color='r', linestyle='--', alpha=0.5)
         rewards_series = pd.Series(rewards)
-        smoothed_rewards = rewards_series.rolling(window=smooth_window, center=True).mean()
-        rewards = rewards_series.rolling(window=int(smooth_window/10), center=True).mean()
+        smoothed_rewards = rewards_series.rolling(window=smooth_window, min_periods=1, center=True).mean()
+        rewards = rewards_series.rolling(window=int(smooth_window/10), min_periods=1, center=True).mean()
         plt.yscale('symlog')
         plt.plot(range(1, len(rewards)+1), rewards, color='b', alpha=0.09)
         plt.plot(range(1, len(smoothed_rewards)+1), smoothed_rewards, color='b')
@@ -249,11 +324,15 @@ class Plotter:
         plt.savefig(save_path + str(grid_size) + 'throughputs.png')
         plt.show()
 
-    def plot_value_per_hyperparameter(self, values, hyperparameters, title, xlabel, ylabel, save_path = 'plots\''):
-        sns.lineplot(x=hyperparameters, y=values)
+    def plot_values_per_hyperparameter(self, values_list, indices, names, title, xlabel, ylabel, save_path='plots/'):
+        for i, values in enumerate(values_list):
+            sns.lineplot(x=indices, y=values, label=names[i])
         plt.xlabel(xlabel)
         plt.ylabel(ylabel)
         plt.title(title)
+        plt.grid(True, which="both", ls="--", linewidth=0.5)
+        plt.legend(loc='upper right', fontsize=12).get_frame().set_edgecolor('black')
+        plt.tight_layout()
         plt.savefig(save_path + title + '.png')
         plt.show()
         plt.clf()
@@ -390,8 +469,7 @@ class Plotter:
     def plot_grids(self, env, grid_size, value_functions, names):
         num_plots = len(value_functions)
         cols = 3
-        rows = (num_plots + cols - 1) // cols  # Calculate number of rows needed
-
+        rows = (num_plots + cols - 1) // cols # Calculate number of rows needed
         fig, axs = plt.subplots(rows, cols, figsize=(4*cols, 4*rows), sharey=True, sharex=True)
         axs = axs.flatten() if num_plots > 1 else [axs]
 
@@ -407,9 +485,9 @@ class Plotter:
                     state4 = (x+1, y+1, 3)
                     if state1 in env.states and env.state_to_index[state1] < env.n_nonterminal_states:
                         grid[x, y] = (value_function[env.state_to_index[state1]] + 
-                                      value_function[env.state_to_index[state2]] + 
-                                      value_function[env.state_to_index[state3]] + 
-                                      value_function[env.state_to_index[state4]]) / 4
+                                    value_function[env.state_to_index[state2]] + 
+                                    value_function[env.state_to_index[state3]] + 
+                                    value_function[env.state_to_index[state4]]) / 4
                     elif state1 not in env.states:
                         grid[x, y] = 50
                     elif not env.is_goal(env.state_to_index[state1]):
@@ -467,6 +545,141 @@ class Plotter:
 
         plt.tight_layout()
         plt.show()
+
+    def plot_grids_with_policies(self, env, grid_size, value_functions, names=None):
+        num_plots = len(value_functions)
+        cols = 3
+        rows = (num_plots + cols - 1) // cols  # Calculate number of rows needed
+        fig, axs = plt.subplots(rows, cols, figsize=(4 * cols, 4 * rows), sharey=True, sharex=True)
+        axs = axs.flatten() if num_plots > 1 else [axs]
+
+        for idx, (value_function, name) in enumerate(zip(value_functions, names if names is not None else [None] * num_plots)):
+            # Initialize the grid for the value function
+            grid = np.full((grid_size, grid_size), 0.0)
+
+            for x in range(0, grid_size):
+                for y in range(0, grid_size):
+                    state1 = (x + 1, y + 1, 0)
+                    state2 = (x + 1, y + 1, 1)
+                    state3 = (x + 1, y + 1, 2)
+                    state4 = (x + 1, y + 1, 3)
+                    if state1 in env.states and env.state_to_index[state1] < env.n_nonterminal_states:
+                        grid[x, y] = float(value_function[env.state_to_index[state1]] +
+                                    value_function[env.state_to_index[state2]] +
+                                    value_function[env.state_to_index[state3]] +
+                                    value_function[env.state_to_index[state4]]) / 4.0
+                    elif state1 not in env.states:
+                        grid[x, y] = 50
+                    elif not env.is_goal(env.state_to_index[state1]):
+                        grid[x, y] = 100
+
+            # Mask the walls for the color mapping
+            masked_grid = np.ma.masked_where(grid == -np.inf, grid)
+
+            # Create a colormap
+            cmap = mcolors.LinearSegmentedColormap.from_list("", [
+                (1, 1, 1),  # White
+                (0.85, 0.85, 0.85),  # Light grey
+                (0.7, 0.7, 0.7),  # Grey
+                (0.5, 0.5, 0.5),  # Dark grey
+                (0.25, 0.25, 0.25)  # Dim grey
+            ])
+            norm = plt.Normalize(vmin=np.min(masked_grid), vmax=0)
+
+            # Plot the grid
+            ax = axs[idx]
+            for (i, j), value in np.ndenumerate(grid):
+                if value == 50:
+                    color = 'black'
+                elif value == 100:
+                    color = '#8B0000'  # Dark Red
+                else:
+                    color = cmap(norm(value))
+                ax.add_patch(plt.Rectangle((i, j), 1, 1, color=color))
+
+            # Set the limits and grid
+            ax.set_xlim(0, grid_size)
+            ax.set_ylim(0, grid_size)
+            ax.set_xticks(np.arange(0, grid_size + 1, 1))
+            ax.set_yticks(np.arange(0, grid_size + 1, 1))
+            ax.grid(which='both', color='black')
+
+            ax.set_xticklabels([])
+            ax.set_yticklabels([])
+            ax.tick_params(left=False, bottom=False)
+
+            # Invert Y-axis to match typical matrix layout
+            ax.invert_yaxis()
+
+            # Add title
+            if names is None:
+                ax.set_title(chr(65 + idx), fontsize=20, loc='left')
+            else:
+                ax.set_title(name, fontsize=12)
+
+            # Add arrows to show the policy
+            for x in range(0, grid_size):
+                for y in range(0, grid_size):
+                    if grid[x, y] <= 0 and grid[x, y] != 0:
+                        values = []
+                        positions = []
+                        if x > 0 and grid[x - 1, y] <= 0:  # left
+                            values.append(grid[x - 1, y])
+                        else:
+                            if x<= 0: 
+                                values.append(grid[x, y])
+                            else:
+                                values.append(grid[x, y]) if grid[x-1, y] == 50 else values.append(env.J["lava"])
+                        positions.append((x - 1, y))
+                        if x < grid_size - 1 and grid[x + 1, y] <= 0:  # right
+                            values.append(grid[x + 1, y])
+                        else:
+                            if x >= grid_size - 1:
+                                values.append(grid[x, y])
+                            else:
+                                values.append(grid[x, y]) if grid[x+1, y] == 50 else values.append(env.J["lava"])
+                        positions.append((x + 1, y))
+                        if y > 0 and grid[x, y - 1] <= 0:  # up
+                            values.append(grid[x, y - 1])
+                        else:
+                            if y <= 0:
+                                values.append(grid[x, y])
+                            else:
+                                values.append(grid[x, y]) if grid[x, y-1] == 50 else values.append(env.J["lava"])
+                        positions.append((x, y - 1))
+                        if y < grid_size - 1 and grid[x, y + 1] <= 0:  # down
+                            values.append(grid[x, y + 1])
+                        else:
+                            if y >= grid_size - 1:
+                                values.append(grid[x, y])
+                            else:
+                                values.append(grid[x, y]) if grid[x, y+1] == 50 else values.append(env.J["lava"])
+                        positions.append((x, y + 1))
+
+                        max_value = max(values)
+                        max_indices = [index for index, value in enumerate(values) if value == max_value]
+                        for index in max_indices:
+                            target_x, target_y = positions[index]
+                            dx, dy = target_x - x, target_y - y
+                            ax.arrow(x + 0.5, y + 0.5, dx * 0.3, dy * 0.3,
+                                    head_width=0.1, head_length=0.1, fc='#00008B', ec='#00008B', length_includes_head=True)  # Dark Blue
+
+        # Remove empty subplots
+        for j in range(idx + 1, len(axs)):
+            fig.delaxes(axs[j])
+
+        sm = plt.cm.ScalarMappable(cmap=cmap, norm=norm)
+        sm.set_array(masked_grid)
+
+        # Adjust layout to fit the colorbar
+        fig.subplots_adjust(right=0.85)
+        cbar_ax = fig.add_axes([0.9, 0.05, 0.015, 0.85])  # Adjusted to be thinner, taller, and closer to the plots
+        cbar = fig.colorbar(sm, cax=cbar_ax)
+        cbar.set_label('Value Function')
+
+        plt.tight_layout(rect=[0, 0, 0.9, 1])
+        plt.show()
+
 
 class Minigrid_MDP_Plotter(Plotter):
 

@@ -3,7 +3,7 @@ import frameworks
 from scipy.sparse import csr_matrix
 
 class MDP:
-    def __init__(self, n_states, n_terminal_states, n_actions, gamma = 0.95, s0 = 0):
+    def __init__(self, n_states, n_terminal_states, n_actions, gamma = 1, s0 = 0):
         self.n_states = n_states
         self.n_nonterminal_states = n_states - n_terminal_states
         self.n_actions = n_actions
@@ -25,6 +25,7 @@ class MDP:
 
         gamma = self.gamma if gamma is None else gamma
 
+        #Q = np.concatenate((np.zeros((self.n_nonterminal_states, self.n_actions)), self.R[self.n_nonterminal_states:]), axis=0)
         Q = np.zeros((self.n_states, self.n_actions))
         V_diff = np.arange(self.n_states)
         n_steps = 0
@@ -59,10 +60,8 @@ class MDP:
             n_steps += 1
         return n_steps
 
-    def embedding_to_LMDP(self, lmbda = 1, gamma = None):
+    def embedding_to_LMDP(self, lmbda = 1, gamma = 1):
         """Embed the MDP into an LMDP."""
-
-        gamma = self.gamma if gamma is None else gamma
 
         # Compute the value function of the original MDP without discounting
         Q, _, _ = self.value_iteration(gamma=gamma)
@@ -94,11 +93,13 @@ class MDP:
             while K_max - K_min > 1e-5:
                 m1 = K_min + (K_max - K_min) / 3
                 lmdp.R = m1 * R
+                #lmdp.R[self.n_nonterminal_states:] = R[self.n_nonterminal_states:]
                 Z1, _ = lmdp.power_iteration(lmbda)
                 mse1 = np.mean(np.square(lmdp.Z_to_V(Z1) - V))
                 
                 m2 = K_max - (K_max - K_min) / 3
-                lmdp.R = m2 * R 
+                lmdp.R = m2 * R
+                #lmdp.R[self.n_nonterminal_states:] = R[self.n_nonterminal_states:]
                 Z2, _ = lmdp.power_iteration(lmbda)
                 mse2 = np.mean(np.square(lmdp.Z_to_V(Z2) - V))
                 if mse1 > mse2:
@@ -107,6 +108,7 @@ class MDP:
                     K_max = m2
 
             lmdp.R = K_min * R
+            #lmdp.R[self.n_nonterminal_states:] = R[self.n_nonterminal_states:]
 
         # Apply the non-deterministic LMDP embedding (from Todorov et al. 2009)
         else:
@@ -131,16 +133,18 @@ class MDP:
                 D_count /= D_count.sum(axis=2, keepdims=True)
 
                 # Apply the Pseudo-Inverse method to both square and non-square matrices
-                B = -self.R[source_states] -np.sum(D_count * np.log(D_count), axis = 2)
+                B = self.R[source_states] + np.sum(D_count * np.log(D_count), axis = 2)
                 pseudo_inverse_D = np.linalg.pinv(D_count)
                 C = np.einsum('ijk,ik->ij', pseudo_inverse_D, B)
 
                 R = np.log(np.sum(np.exp(-C), axis=1))
-                M = - R[:, np.newaxis] - C
+                M = - R[:, np.newaxis] + C
 
                 # Assign the reward and initial state distribution to the LMDP in the corresponding states
                 lmdp.R[source_states] = R
                 lmdp.P0[source_states_repeated, next_states] = np.exp(M).flatten()
+
+            lmdp.R[self.n_nonterminal_states:] = np.sum(self.R[self.n_nonterminal_states:], axis = 1)/self.n_actions
 
         
         embedding_mse = np.mean(np.square(lmdp.Z_to_V(lmdp.power_iteration(lmbda)[0]) - V))

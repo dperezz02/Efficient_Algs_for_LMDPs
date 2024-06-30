@@ -25,7 +25,6 @@ class QLearning:
         self.reset_randomness = reset_randomness
         self.RS = np.random.RandomState(seed)
         self.episode_end = False
-        self.at_goal = False
 
     def get_delta(self, r, x, a, y):
         """
@@ -53,7 +52,6 @@ class QLearning:
         # Take mdp action
         a  = self.get_action(self.state)
         next_state, self.r, self.episode_end = self.mdp.act(self.state, a)
-        self.at_goal = self.episode_end
 
         # Get Delta Update
         delta = self.get_delta(self.r, self.state, a, next_state)
@@ -63,49 +61,43 @@ class QLearning:
 
         # Keep track of state-action visits
         self.Nsa[self.state, a] += 1
+
         self.state = next_state
 
         if self.episode_end:
+            self.r += np.min(self.mdp.R[self.state])
             self.n_episodes += 1
             self.epsilon = max(self.epsilon * self.epsilon_decay, self.epsilon_min)
             self.learning_rate = self.c / (self.c + self.n_episodes)
-            self.at_goal = np.sum(self.mdp.R[self.state]) == 0
             self.state = np.random.choice(self.mdp.n_nonterminal_states) if np.random.rand() < self.reset_randomness else self.mdp.s0
 
-def Qlearning_training(qlearning, n_steps=int(5e5)):
+
+def Qlearning_training(qlearning, n_steps=int(5e5), V=None):
     tt = 0
     l0 = 0
-    s0 = qlearning.mdp.s0
     lengths = []
     cumulative_reward = 0
+    rewards = np.zeros(n_steps)
     throughputs = np.zeros(n_steps)
-    throughputs2 = np.zeros(n_steps)
 
-    Q_est = np.zeros((qlearning.mdp.n_states, qlearning.mdp.n_actions))
+    V_error = np.zeros((n_steps))
     start_time = time.time()
     while tt < n_steps:
         qlearning.step()
         # Store estimate of Q*
-        # Q_est = qlearning.Q
+        if tt < len(V_error): 
+            V_est = qlearning.Q.max(axis=1)
+            V_error[tt] = np.mean(np.square(V_est - V))
         cumulative_reward += qlearning.r
         tt +=1
 
         if qlearning.episode_end:
             lengths.append((tt-l0))
-            cumulative_reward = cumulative_reward if qlearning.at_goal else cumulative_reward + np.min(qlearning.mdp.R[qlearning.state])
-            if cumulative_reward >= 0:
-                print(tt, cumulative_reward, qlearning.r, np.min(qlearning.mdp.R[qlearning.state]))
-            throughputs[l0:tt] = cumulative_reward 
-            throughput = 1 if qlearning.at_goal else 0 
-            throughputs2[l0:tt] = throughput/(tt-l0)
+            rewards[l0:tt] = cumulative_reward
+            throughputs[l0:tt] = -1/(cumulative_reward)
             l0 = tt
-            s0 = qlearning.state
             cumulative_reward = 0
-            if throughputs[l0] >0:
-                print('throughput',throughputs[l0])
-                print(qlearning.r)
-                print(np.min(qlearning.mdp.R[qlearning.state]))
-
+            
         if tt % 10000 == 0:
 
             elapsed_time = time.time() - start_time
@@ -113,15 +105,17 @@ def Qlearning_training(qlearning, n_steps=int(5e5)):
             estimated_remaining_time = estimated_total_time - elapsed_time
 
             print(f"Step: {tt}/{n_steps}, Time: {elapsed_time/60:.2f}m, ETA: {estimated_remaining_time/60:.2f}m")
-    
-    if l0 != tt: throughputs2[l0:tt] = throughputs2[l0-1]
+
+    if tt != l0:
+        rewards[l0:tt] = cumulative_reward
+        throughputs[l0:tt] = -1/(cumulative_reward)
 
     Q_est = qlearning.Q
 
     # Compute greedy policy (with estimated Q)
     greedy_policy = np.argmax(qlearning.Q, axis=1)
 
-    return Q_est, greedy_policy, throughputs2, throughputs
+    return Q_est, V_error, greedy_policy, throughputs, rewards
 
 def print_Qlearning(Q_opt, Q_est, mdp):
 
