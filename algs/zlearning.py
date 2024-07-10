@@ -101,8 +101,8 @@ def Zlearning_training(zlearning: ZLearning, n_steps = int(5e5), V=None):
 
 
     if l0 != tt: 
-        z_throughputs[l0:tt] = -1/(cumulative_reward)
-        z_rewards[l0:tt] = cumulative_reward
+        z_throughputs[l0:tt] = -1/(z_rewards[l0-1])
+        z_rewards[l0:tt] = z_rewards[l0-1]
 
     zlearning.Pu = zlearning.lmdp.compute_Pu(zlearning.Z)
 

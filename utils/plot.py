@@ -108,7 +108,7 @@ class Plotter:
         plt.show()
         plt.clf()
 
-    def plot_rewards_and_errors(self, errors, rewards, names, smooth_window_initial=2000, smooth_window_later=2000, save_path='plots/', title="Episodic Reward in Minigrid domain"):
+    def plot_rewards_and_errors(self, errors, rewards, names, smooth_window_initial=2000, smooth_window_later=10000, save_path='plots/', title="Episodic Reward in Minigrid domain"):
         # Prepare data for errors
         df_errors = pd.DataFrame()
         # Prepare data for rewards
@@ -152,7 +152,7 @@ class Plotter:
         sns.lineplot(x='index', y='smoothed_rewards', data=df_rewards, hue='name', style='name', ax=axs[1])
         axs[1].set(xlabel="Time Step", ylabel="Episodic Reward (symlog scale)")
         axs[1].set_yscale('symlog')
-        axs[1].set_ylim([min(df_rewards['smoothed_rewards'].min()-500, 1e-3), max(df_rewards['smoothed_rewards'].max()+5, -10)])  # Adjust y-axis limits here
+        axs[1].set_ylim([min(df_rewards['smoothed_rewards'].min()-1000, 1e-3), min(df_rewards['smoothed_rewards'].max()+20, -10)])  # Adjust y-axis limits here
         handles, labels = axs[1].get_legend_handles_labels()
         new_labels = [label for label in labels]
         axs[1].legend(handles, new_labels, loc='upper right', fontsize=12).get_frame().set_edgecolor('black')
@@ -374,7 +374,7 @@ class Plotter:
             if (i, j) in walls:
                 color = 'black'
             elif (i, j) in lavas:
-                color = 'lightcoral'
+                color = '#8B0000'
             else:
                 color = cmap(norm(value))
             ax.add_patch(plt.Rectangle((j, i), 1, 1, color=color))
@@ -439,7 +439,7 @@ class Plotter:
             if value==50:
                 color = 'black'
             elif value==100:
-                color = 'orange'
+                color = '#8B0000'
             else:
                 color = cmap(norm(value))
             ax.add_patch(plt.Rectangle((i, j), 1, 1, color=color))
@@ -484,10 +484,10 @@ class Plotter:
                     state3 = (x+1, y+1, 2)
                     state4 = (x+1, y+1, 3)
                     if state1 in env.states and env.state_to_index[state1] < env.n_nonterminal_states:
-                        grid[x, y] = (value_function[env.state_to_index[state1]] + 
-                                    value_function[env.state_to_index[state2]] + 
-                                    value_function[env.state_to_index[state3]] + 
-                                    value_function[env.state_to_index[state4]]) / 4
+                        grid[x, y] = max(value_function[env.state_to_index[state1]], 
+                                    value_function[env.state_to_index[state2]], 
+                                    value_function[env.state_to_index[state3]], 
+                                    value_function[env.state_to_index[state4]])
                     elif state1 not in env.states:
                         grid[x, y] = 50
                     elif not env.is_goal(env.state_to_index[state1]):
@@ -512,7 +512,7 @@ class Plotter:
                 if value == 50:
                     color = 'black'
                 elif value == 100:
-                    color = 'orange'
+                    color = '#8B0000'
                 else:
                     color = cmap(norm(value))
                 ax.add_patch(plt.Rectangle((i, j), 1, 1, color=color))

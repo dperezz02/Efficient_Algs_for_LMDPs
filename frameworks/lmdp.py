@@ -88,7 +88,7 @@ class LMDP:
         product = Pu.data * log_ratio
         mdp.R = self.R - lmbda * np.concatenate((np.bincount(row_indices, weights=product), np.zeros(self.n_states-self.n_nonterminal_states)))
         mdp.R = np.broadcast_to(mdp.R.reshape(-1, 1), (self.n_states, n_actions))
-
+        
         # Compute the transition probabilities
         n_next_states_per_row = np.diff(Pu.indptr)
         n_next_states = np.unique(n_next_states_per_row)

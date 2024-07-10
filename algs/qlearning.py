@@ -107,8 +107,8 @@ def Qlearning_training(qlearning, n_steps=int(5e5), V=None):
             print(f"Step: {tt}/{n_steps}, Time: {elapsed_time/60:.2f}m, ETA: {estimated_remaining_time/60:.2f}m")
 
     if tt != l0:
-        rewards[l0:tt] = cumulative_reward
-        throughputs[l0:tt] = -1/(cumulative_reward)
+        rewards[l0:tt] = rewards[l0-1]
+        throughputs[l0:tt] = -1/(rewards[l0-1])
 
     Q_est = qlearning.Q
 

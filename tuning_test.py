@@ -136,53 +136,94 @@ if __name__ == "__main__":
 
         return {"walls": list(walls), "lavas": list(lavas)}
 
-    grid_size = 15
+    grid_size = 10
     wall_percentage = 10
     lava_percentage = 10
     objects = generate_random_walls_and_lavas(grid_size, wall_percentage, lava_percentage)
-    #objects = {"walls":[], "lavas":[]}
+    objects = {"walls":[], "lavas":[]}
 
-    grid_map = None
+    grid_map = hill15_map
     grid_size = len(grid_map)-2 if grid_map is not None else grid_size
 
 
     # MDP
     simplegrid_mdp = SimpleGrid_MDP(grid_size)
-    minigrid_mdp = Minigrid_MDP(grid_size, objects=objects, map = grid_map)
-    minigrid_mdp.render()
-    minigrid_mdp_plots = Minigrid_MDP_Plotter(minigrid_mdp)
-    minigrid_lmdp, error = minigrid_mdp.embedding_to_LMDP()
+    minigrid_mdp2 = Minigrid_MDP(grid_size, objects=objects, map = grid_map)
+    #minigrid_mdp.render()
+    
+    #minigrid_lmdp, error = minigrid_mdp.embedding_to_LMDP()
+    minigrid_lmdp = Minigrid_LMDP(grid_size, objects=objects, map = grid_map)
+    minigrid_mdp, error = minigrid_lmdp.embedding_to_MDP()
     print(error)
+    # minigrid_lmdp, error = minigrid_mdp.embedding_to_LMDP()
+    # print(error)
+    # minigrid_mdp, error = minigrid_lmdp.embedding_to_MDP()
+    # print(error)
+    minigrid_mdp_plots = Minigrid_MDP_Plotter(minigrid_mdp)
+    
+    
+    Z, n_steps = minigrid_lmdp.power_iteration(lmbda = 1, epsilon=1e-10)
+    V2 = minigrid_lmdp.Z_to_V(Z)
+
+    minigrid_mdp_plots.plot_minigrid(minigrid_mdp, grid_size, V2)
+
+
 
 
     gamma = 1
     epsilon = 1e-10
-    n_iters = int(1.5e6)
+    n_iters = int(2e5)
     lmbda = 1
-
-    Q_simple, opt_policy_simple, n_steps = simplegrid_mdp.value_iteration(epsilon, gamma)
 
     # Value Iteration MDP
     Q, opt_policy, n_steps = minigrid_mdp.value_iteration(epsilon, gamma)
     V = np.max(Q, axis=1) 
 
-    # qlearning2 = QLearning(minigrid_mdp, gamma=gamma, c=200, epsilon=0.25, epsilon_decay=1, epsilon_min = 0)
-    # Q_est2, V_error2, est_policy2, throughputs2, rewards2 = Qlearning_training(qlearning2, n_steps=n_iters, V=V)
-    # V_est2 = np.max(Q_est2, axis=1)
-    #minigrid_mdp_plots.plot_rewards_and_errors([V_error2, V_error2+2], [rewards2, rewards2+2], [r"$\epsilon$-Q-L", r"$\epsilon_{d}$-Q-L"], title="Minigrid  domain, grid size=15x15")
-
-
-    qlearning = QLearning(minigrid_mdp, gamma=gamma, c=200, epsilon=1, epsilon_decay=0.9995, epsilon_min = 0)
+    qlearning = QLearning(minigrid_mdp, gamma=gamma, c=200, epsilon=1, epsilon_decay=0.999, epsilon_min = 0, reset_randomness=0.1)
     Q_est, V_error, est_policy, throughputs, rewards = Qlearning_training(qlearning, n_steps=n_iters, V=V)
 
     V_est = np.max(Q_est, axis=1)
 
-    zlearning = ZLearning(minigrid_lmdp, lmbda=lmbda, c=10000)
-    Z, V_error2, z_throughputs, z_rewards = Zlearning_training(zlearning, n_steps=n_iters, V=V)
-    V_est2 = minigrid_lmdp.Z_to_V(Z)
+    qlearning = QLearning(minigrid_mdp2, gamma=gamma, c=200, epsilon=1, epsilon_decay=0.999, epsilon_min = 0, reset_randomness=0.1)
+    Q_est2, V_error2, est_policy2, throughputs2, rewards2 = Qlearning_training(qlearning, n_steps=n_iters, V=V)
+
+    #minigrid_mdp_plots.plot_rewards_and_errors([V_error, V_error2], [rewards, rewards2], [r"$\epsilon$-Q-L", r"$\epsilon_{d}$-Q-L"], title="Minigrid  domain, grid size=15x15")
     
 
-    minigrid_mdp_plots.plot_rewards_and_errors([V_error, V_error2], [rewards, z_rewards], ["Q-L", "Z-L"], title="Minigrid domain, grid size=15x15")
+    zlearning = ZLearning(minigrid_lmdp, lmbda=lmbda, c=10000, reset_randomness=0.1)
+    Z, V_error2, z_throughputs, z_rewards = Zlearning_training(zlearning, n_steps=n_iters, V=V2)
+    V_est2 = minigrid_lmdp.Z_to_V(Z)
+
+    print(np.mean(np.square(V_est2 - V2)))
+
+    PU = minigrid_lmdp.compute_Pu(Z)
+
+    with open("V_opt.txt", "w") as f:
+        for i in range(minigrid_lmdp.n_nonterminal_states):
+            f.write("V_Z[{}]: {}\n".format(minigrid_lmdp.states[i], V2[i]))
+
+    with open("Pu.txt", "w") as f:
+        for i in range(minigrid_lmdp.n_nonterminal_states):
+            for j in PU[i].indices:
+                f.write("Pu[{}, {}] -> {}\n".format(minigrid_lmdp.states[i], minigrid_lmdp.states[j], PU[i,j]))
+
+    with open("V_z_true.txt", "w") as f:
+        for i in range(minigrid_lmdp.n_nonterminal_states):
+            f.write("V_Z[{}]: {}\n".format(minigrid_lmdp.states[i], V_est2[i]))
+
+    with open("V_error.txt", "w") as f:
+        for i in range(minigrid_lmdp.n_nonterminal_states):
+            f.write("V_error[{}]: {}\n".format(minigrid_lmdp.states[i], np.mean(np.square(V_est2[i] - V2[i]))))
+
+    # # with open("V_z.txt", "w") as f:
+    # #     for i in range(1, grid_size+1):
+    # #         for j in range(1, grid_size+1):
+    # #             if (i,j,0) in minigrid_mdp.states:
+    # #                 v = max(V_est2[minigrid_lmdp.state_to_index[(i,j,0)]], V_est2[minigrid_lmdp.state_to_index[(i,j,1)]], V_est2[minigrid_lmdp.state_to_index[(i,j,2)]], V_est2[minigrid_lmdp.state_to_index[(i,j,3)]] )
+    # #                 f.write("V_z[{}]: {}\n".format((i,j), v))
+
+
+    minigrid_mdp_plots.plot_rewards_and_errors([V_error, V_error2], [rewards2, z_rewards], ["Q-L", "Z-L"], title="Minigrid (hill cliff) domain, grid size=13x13")
 
     minigrid_mdp_plots.plot_grids_with_policies(env=minigrid_mdp, grid_size= grid_size, value_functions = [V, V_est, V_est2], names = ["Optimal Value Function", "Q-learning", "Z-learning"])
 
@@ -235,28 +276,31 @@ if __name__ == "__main__":
     # print(throughputs[-1])
 
 
-    # c_values = [200, 500, 1000, 10000, 100000, 1000000]
+    lambda_values = [0.1, 1, 2, 5]
 
-    # throughputs = []
-    # throughputs2 = []
-    # z_names = []
-    # v_errors = []
-    # v_mses = []
-    # q_policy_differences = []
+    z_rewards = []
+    z_names = []
+    z_errors = []
+    z_values = []
+    z_values.append(V)
+    z_names.append("Optimal Value Function")
 
-    # for c in c_values:
-    #     #qlearning = QLearning(minigrid_mdp, gamma=gamma, epsilon=1, epsilon_decay=0.9995, epsilon_min = 0, c = c)
-    #     zlearning = ZLearning(minigrid, lmbda=lmbda, c=c)
-    #     #Q_est, est_policy, q_throughputs2, q_throughputs = Qlearning_training(qlearning, n_steps=n_iters)
-    #     #V_est = np.max(Q_est, axis=1)
-    #     Z_est, z_throughputs2, z_throughputs = Zlearning_training(zlearning, n_steps=n_iters)
-    #     V_est = minigrid.Z_to_V(Z_est)
-    #     throughputs.append(z_throughputs)
-    #     throughputs2.append(z_throughputs2)
-    #     z_names.append('C: ' + str(c))
-    #     v_errors.append(np.max(np.abs(V - V_est))/np.max(np.abs(V)))
-    #     v_mses.append(np.mean(np.square(V - V_est)))
-    #     #q_policy_differences.append(np.sum(opt_policy != est_policy))
+    for c in lambda_values:
+        zlearning = ZLearning(minigrid_lmdp, lmbda=c, c=10000)
+        Z, V_error, throughputs, rewards = Zlearning_training(zlearning, n_steps=n_iters, V=V)
+        V_est = minigrid_lmdp.Z_to_V(Z)
+        print(V_error[-1], rewards[-1])
+
+        z_rewards.append(rewards)
+        z_names.append(r'$\lambda$=' + str(c))
+        z_errors.append(V_error)
+        z_values.append(V_est)
+
+    minigrid_mdp_plots.plot_rewards_and_errors(z_errors, z_rewards, z_names[1:], title=r"Minigrid (hill cliff) domain, grid size$=13x13$")
+    
+    minigrid_mdp_plots.plot_grids_with_policies(env=minigrid_mdp, grid_size= grid_size, value_functions = z_values, names = z_names)
+
+
 
 
     # minigrid_plots.plot_throughput(throughputs2, grid_size, names = z_names, smooth_window=10000, save_path='plots\Z_c_throughputs')
@@ -265,27 +309,27 @@ if __name__ == "__main__":
     # minigrid_plots.plot_value_per_hyperparameter(v_mses, c_values, title = 'Value Function MSE Error by Learning Rate in Z-learning', xlabel = 'C', ylabel = 'Mean Squared Errpr', save_path = 'plots\Z_c_mse')
     # #minigrid_mdp_embedded_plots.plot_value_per_hyperparameter(q_policy_differences, c_values, title = 'Policy Differences by Learning Rate', xlabel = 'C', ylabel = 'Policy Differences', save_path = 'plots\Q_embedded_c_policy_difference')
 
-    epsilon_decays = [0.9999, 0.9995, 0.999, 0.995, 0.99]
-    epsilon_decays = [0.999, 0.99]
-    q_rewards = []
-    q_names = []
-    q_errors = []
-    q_values = []
-    q_values.append(V)
-    q_names.append("Optimal Value Function")
+    # epsilon_decays = [0.9999, 0.9995, 0.999, 0.995, 0.99]
+    # epsilon_decays = [0.999, 0.99]
+    # q_rewards = []
+    # q_names = []
+    # q_errors = []
+    # q_values = []
+    # q_values.append(V)
+    # q_names.append("Optimal Value Function")
     
-    for epsilon_decay in epsilon_decays:
-        qlearning = QLearning(minigrid_mdp, gamma=gamma, c=200, epsilon=1, epsilon_decay=epsilon_decay, epsilon_min = 0)
-        Q_est, V_error, est_policy, throughputs, rewards = Qlearning_training(qlearning, n_steps=n_iters, V=V)
-        V_est = np.max(Q_est, axis=1)
-        q_rewards.append(rewards)
-        q_names.append(r'$\epsilon_{decay}$=' + str(epsilon_decay))
-        q_errors.append(V_error)
-        q_values.append(V_est)
+    # for epsilon_decay in epsilon_decays:
+    #     qlearning = QLearning(minigrid_mdp, gamma=gamma, c=200, epsilon=1, epsilon_decay=epsilon_decay, epsilon_min = 0)
+    #     Q_est, V_error, est_policy, throughputs, rewards = Qlearning_training(qlearning, n_steps=n_iters, V=V)
+    #     V_est = np.max(Q_est, axis=1)
+    #     q_rewards.append(rewards)
+    #     q_names.append(r'$\epsilon_{decay}$=' + str(epsilon_decay))
+    #     q_errors.append(V_error)
+    #     q_values.append(V_est)
     
-    minigrid_mdp_plots.plot_rewards_and_errors(q_errors, q_rewards, q_names[1:], title=r"Minigrid (hill cliff) domain, grid size$=15x15$, $\epsilon=1$")
+    # minigrid_mdp_plots.plot_rewards_and_errors(q_errors, q_rewards, q_names[1:], title=r"Minigrid (hill cliff) domain, grid size$=15x15$, $\epsilon=1$")
 
-    minigrid_mdp_plots.plot_grids_with_policies(env=minigrid_mdp, grid_size= grid_size, value_functions = q_values, names = q_names)
+    # minigrid_mdp_plots.plot_grids_with_policies(env=minigrid_mdp, grid_size= grid_size, value_functions = q_values, names = q_names)
 
 
 
