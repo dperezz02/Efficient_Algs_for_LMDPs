@@ -3,9 +3,9 @@ import matplotlib.pyplot as plt
 from gym.wrappers import OrderEnforcing
 from environments.grid import CustomEnv
 from scipy.sparse import csr_matrix
-import frameworks
 from frameworks.mdp import MDP
 from frameworks.lmdp import LMDP
+import random
 
 
 class Minigrid_MDP(MDP):
@@ -382,3 +382,32 @@ class Minigrid_LMDP(LMDP):
     def print_environment(self):
         print("States: ", self.states)
         print("Actions: ", self.actions)
+
+
+def generate_random_walls_and_lavas(grid_size, wall_percentage, lava_percentage):
+    walls = set()
+    lavas = set()
+
+    # Ensure the start and goal positions are not filled
+    forbidden_positions = {(1, 1), (grid_size, grid_size)}
+
+    # Calculate the number of walls and lavas based on the percentage
+    num_states = grid_size * grid_size
+    num_walls = int(num_states * wall_percentage / 100)
+    num_lavas = int(num_states * lava_percentage / 100)
+
+    # Randomly generate wall positions
+    while len(walls) < num_walls:
+        x = random.randint(1, grid_size)
+        y = random.randint(1, grid_size)
+        if (x, y) not in forbidden_positions and (x, y) not in lavas:
+            walls.add((x, y))
+
+    # Randomly generate lava positions
+    while len(lavas) < num_lavas:
+        x = random.randint(1, grid_size)
+        y = random.randint(1, grid_size)
+        if (x, y) not in forbidden_positions and (x, y) not in walls:
+            lavas.add((x, y))
+
+    return {"walls": list(walls), "lavas": list(lavas)}
