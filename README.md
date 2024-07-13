@@ -1,8 +1,8 @@
-# MiniGrid Project
+# Efficient Algorithms for Linearly-solvable Markov Decision Processes
 
 ## Introduction
 
-This is the repository for the `minigrid` project. More details about the project will be added here.
+This is the repository for the `Efficient Algorithms for Linearly-solvable Markov Decision Processes` project. More details about the project will be added here.
 
 ## Requirements
 
