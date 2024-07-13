@@ -112,11 +112,8 @@ if __name__ == "__main__":
     objects = generate_random_walls_and_lavas(grid_size, wall_percentage, lava_percentage)
     #objects = {"walls":[], "lavas":[]}
 
-    grid_map1 = hill13_map
-    grid_size1 = len(grid_map1)-2 if grid_map1 is not None else grid_size
-
-    grid_map2 = rooms18_map
-    grid_size2 = len(grid_map2)-2 if grid_map2 is not None else grid_size
+    grid_map = hill13_map
+    grid_size = len(grid_map)-2 if grid_map is not None else grid_size
 
     gamma = 1
     epsilon = 1e-10
@@ -124,11 +121,7 @@ if __name__ == "__main__":
     lmbda = 1
 
     # MDP
-    minigrid_mdp = Minigrid_MDP(grid_size=grid_size1, objects = {"walls":[], "lavas":[]}, map=grid_map1, gamma=gamma)
-    image = minigrid_mdp.env.render()
-
-    minigrid_mdp2 = Minigrid_MDP(grid_size=grid_size2, objects = {"walls":[], "lavas":[]}, map=grid_map2, gamma=gamma)
-    image2 = minigrid_mdp2.env.render()
+    minigrid_mdp = Minigrid_MDP(grid_size=grid_size, objects = objects, map=grid_map, gamma=gamma)
 
 
     # minigrid_mdp_plots = Minigrid_MDP_Plotter(minigrid_mdp)
