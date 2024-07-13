@@ -23,7 +23,7 @@ class Plotter:
         sns.set_context(context="paper", font_scale=1.2)
         sns.set_style({'font.family': 'serif'})
 
-    def plot_throughput(self, throughputs, grid_size, names, smooth_window = 10000, save_path = 'plots\'', title="Episodic Throughput in Minigrid "):
+    def plot_throughput(self, throughputs, grid_size, names, smooth_window = 10000, save_path = 'plots\'', title="Episodic Throughput"):
         df = pd.DataFrame()
         for i in range(len(names)):
             temp_df = pd.DataFrame()
@@ -63,7 +63,7 @@ class Plotter:
         plt.show()
         plt.clf()
 
-    def plot_rewards(self, rewards, grid_size, names, smooth_window_initial=1, smooth_window_later=2000, save_path='plots/', title="Episodic Reward in Minigrid "):
+    def plot_rewards(self, rewards, names, smooth_window_initial=100, smooth_window_later=2000, save_path='plots/', title="Episodic Reward"):
         df = pd.DataFrame()
         for i in range(len(names)):
             temp_df = pd.DataFrame()
@@ -104,11 +104,11 @@ class Plotter:
         plt.title(title)
         plt.grid(True, which="both", ls="--", linewidth=0.5)
         plt.tight_layout()
-        plt.savefig(save_path + str(grid_size) + 'rewards.png')
+        plt.savefig(save_path + 'rewards.png')
         plt.show()
         plt.clf()
 
-    def plot_rewards_and_errors(self, errors, rewards, names, smooth_window_initial=2000, smooth_window_later=10000, save_path='plots/', title="Episodic Reward in Minigrid domain"):
+    def plot_rewards_and_errors(self, errors, rewards, names, smooth_window_initial=2000, smooth_window_later=10000, save_path='plots/', title="Episodic Reward and Approximation Error"):
         # Prepare data for errors
         df_errors = pd.DataFrame()
         # Prepare data for rewards
@@ -156,7 +156,6 @@ class Plotter:
         handles, labels = axs[1].get_legend_handles_labels()
         new_labels = [label for label in labels]
         axs[1].legend(handles, new_labels, loc='upper right', fontsize=12).get_frame().set_edgecolor('black')
-        #axs[1].legend(loc='upper right', fontsize=12).get_frame().set_edgecolor('black')
         axs[1].grid(True, which="both", ls="--", linewidth=0.5)
 
         plt.tight_layout()
@@ -214,7 +213,7 @@ class Plotter:
         plt.show()
         plt.clf()
 
-    def plot_mse_vs_grid_size(self, n_states, mse_values, names, save_path = 'plots/'):
+    def plot_mse_vs_n_states(self, n_states, mse_values, names, save_path = 'plots/'):
         df = pd.DataFrame()
         for mse, name in zip(mse_values, names):
             temp_df = pd.DataFrame({'Number of States': n_states, 'MSE': mse, 'Method': name, 'Name': name})
@@ -225,15 +224,12 @@ class Plotter:
 
         plt.xlabel('Number of States', fontsize=14)
         plt.ylabel('Mean Squared Error (MSE)', fontsize=14)
-        #plt.yscale('log')  # Use logarithmic scale for y-axis
         plt.yscale('log')  # Use logarithmic scale for y-axis
         plt.title('MSE vs. Number of States for Embedding Approaches', fontsize=16)
         plt.grid(True, which="both", ls="--", linewidth=0.5)
 
-        # Customize legend
         legend = plt.legend(loc='upper right', fontsize=12)
         legend.get_frame().set_edgecolor('black')  
-        
         
         plt.tight_layout()
         plt.savefig(save_path + 'mse_vs_n_states2.png')
@@ -251,8 +247,8 @@ class Plotter:
 
         plt.xlabel('Time step', fontsize=14)
         plt.ylabel('Mean Squared Error (log scale)', fontsize=14)
-        # if scale is not None:
-        #     plt.yscale(scale)
+        if scale is not None:
+            plt.yscale(scale)
         plt.title(title, fontsize=16)
         plt.grid(True, which="both", ls="--", linewidth=0.5)
 
@@ -311,18 +307,6 @@ class Plotter:
         plt.ylabel("Episodic Reward")
         plt.title(title)
         plt.show()
-    
-            
-    def compare_throughputs(self, throughputs, grid_size, names, save_path = 'plots\''):
-        for i, throughput in enumerate(throughputs):
-            plt.plot(range(1, len(throughput)+1), throughput, label= names[i])
-        plt.axhline(y=1/(2*grid_size-1), color='r', linestyle='--', alpha=0.5)
-        plt.xlabel("Time Step")
-        plt.ylabel("Average Reward")
-        plt.title("Average Reward per Time Step in Minigrid " + str(grid_size) + "x"+ str(grid_size))
-        plt.legend()
-        plt.savefig(save_path + str(grid_size) + 'throughputs.png')
-        plt.show()
 
     def plot_values_per_hyperparameter(self, values_list, indices, names, title, xlabel, ylabel, save_path='plots/'):
         for i, values in enumerate(values_list):
@@ -343,6 +327,136 @@ class Plotter:
         plt.xlabel('iteration')
         plt.ylabel('Error')
         plt.title(model + " convergence")
+        plt.show()
+
+
+class Minigrid_MDP_Plotter(Plotter):
+
+    def __init__(self, minigrid):
+        super().__init__()
+        self.minigrid = minigrid
+
+    def minigrid_demo(self):
+        print("Welcome to our Minigrid Interactive Demo")
+        action = np.random.choice(self.minigrid.n_actions)
+        a = input(f"       Select an Action from {self.minigrid.actions} (default {action}): ")
+        while a != 'e':
+            if a and a.isdigit():
+                action = int(a)
+                _, reward, terminated, truncated, info = self.minigrid.env.step(action)
+                print("Minigrid Step")
+                print("       Action:", action)
+                print("  Observation:", self.minigrid.observation())
+                print("       Reward:", reward)
+                print("         Done:", "terminated" if terminated else "truncated" if truncated else "False", )
+                print("         Info:", info)
+                self.minigrid.render()
+            else:
+                print("Invalid action.")
+            a = input(f"       Select an Action from {self.minigrid.actions} (default {action}, press 'e' to exit): ")
+
+    def state_visited_policy(self, policy):
+        state = self.minigrid.s0
+        states_visited = np.zeros((self.minigrid.n_states))
+        states_visited[state] = 1
+        n_steps = 0
+        while True:
+            n_steps += 1
+            next_state, _, done = self.minigrid.act(state, policy[state])
+            states_visited[next_state] = 1
+            if done:
+                break
+            else:
+                state = next_state
+
+            if n_steps > 100:
+                break
+
+        return states_visited
+
+    def plot_greedy_policy(self, greedy_policy, estimated=False, print_policy=False):
+        if print_policy: print(greedy_policy)
+        states_visited = self.state_visited_policy(greedy_policy)
+        plt.figure(figsize=(5, 2*self.minigrid.grid_size))
+        plt.imshow(states_visited.reshape((self.minigrid.n_cells,4)), cmap="Greys")
+        if estimated: plt.title("Estimated policy \n ( The states in black represent the states selected by the estimated policy)")
+        else: plt.title("Optimal policy \n ( The states in black represent the states selected by the Optimal policy)")
+        plt.xlabel("Orientation")
+        plt.ylabel("Cell Position")
+        y_labels = [f"{i//self.minigrid.grid_size + 1}x{i%self.minigrid.grid_size + 1}" for i in range(self.minigrid.n_cells)]
+        x_labels = [f"{i}" for i in range(self.minigrid.n_orientations)]
+        plt.yticks(range(self.minigrid.n_cells), y_labels)
+        plt.xticks(range(self.minigrid.n_orientations), x_labels)
+        plt.show()   
+
+    def plot_value_function(self, Q, print_values=False, plot_values=False, file = "value_function.txt"):
+        V = Q.max(axis=1)
+        if print_values: 
+            with open(file, "w") as f:
+                for s in range(self.minigrid.n_states):
+                    f.write("V({}): {}\n".format(self.minigrid.states[s], V[s]))
+                    f.write("Q({}): {}\n".format(self.minigrid.states[s], Q[s]))
+
+        if plot_values:
+
+            plt.figure(figsize=(5, 2*self.minigrid.grid_size))
+            im = plt.imshow(V.reshape((self.minigrid.n_cells,4)), vmin= V.min(), vmax=V.max())
+            colorbar_ticks = np.linspace(V.max(), V.min(), 10)
+            plt.colorbar(im, ticks=colorbar_ticks) 
+            plt.title("V(s)")
+            plt.xlabel("Orientation")
+            plt.ylabel("Cell Position")
+            y_labels = [f"{i//self.minigrid.grid_size + 1}x{i%self.minigrid.grid_size + 1}" for i in range(self.minigrid.n_cells)]
+            x_labels = [f"{i}" for i in range(self.minigrid.n_orientations)]
+            plt.yticks(range(self.minigrid.n_cells), y_labels)
+            plt.xticks(range(self.minigrid.n_orientations), x_labels)
+            plt.show()
+
+    def plot_path(self, policy, start = 0, path='MDP_policy_path.gif'):
+        self.minigrid.s0 = start if self.minigrid.s0 != start else self.minigrid.s0
+        s = self.minigrid.reset()
+        done = False
+        with imageio.get_writer(path, mode='I', duration=0.2, loop=10) as writer:
+            writer.append_data(self.minigrid.env.render())
+            while not (done and self.minigrid.is_goal(s)):
+                s, _, done = self.minigrid.step(s, policy[s]) if not self.minigrid.is_goal(s) else (start, 0, False)
+                writer.append_data(self.minigrid.env.render())
+        os.startfile(path)  # for windows
+
+    def plot_greedy_policy_square(self, greedy_policy):
+        states_visited = self.state_visited_policy(greedy_policy)
+        _, axs = plt.subplots(self.minigrid.grid_size, self.minigrid.grid_size, figsize=(30, 80))
+
+        # Calculate the number of orientations per cell
+        num_orientations = self.minigrid.n_orientations
+
+        # Iterate over each cell
+        for row in range(self.minigrid.grid_size):
+            for col in range(self.minigrid.grid_size):
+                ax = axs[row, col]
+
+                # Calculate the indices for the orientations of the current cell
+                base_index = self.minigrid.state_to_index[(col + 1, row + 1, 0)]
+                indices = [base_index + o for o in range(num_orientations)]
+
+                # Create an empty grid for the current cell
+                cell_grid = np.zeros((num_orientations, num_orientations))
+
+                # Mark visited states within the cell
+                for index in indices:
+                    if states_visited[index] == 1:
+                        orientation = index - base_index
+                        cell_grid[orientation % num_orientations, orientation // num_orientations] = 1
+
+                # Plot the grid for the current cell
+                ax.imshow(cell_grid, cmap="Greys", origin='upper')
+
+                # Set title and remove axes ticks
+                ax.set_title(f"Cell ({col+1}, {row+1})")
+                ax.axis("off")
+
+        plt.suptitle("Greedy Policy\n(The states in black represent the states selected by the greedy policy)")
+        plt.tight_layout(rect=[0, 0.03, 1, 0.95])
         plt.show()
 
     def plot_grid(self, env, grid_size, value_function, walls, lavas):
@@ -466,7 +580,7 @@ class Plotter:
 
         plt.show()
 
-    def plot_grids(self, env, grid_size, value_functions, names):
+    def plot_minigrids(self, env, grid_size, value_functions, names):
         num_plots = len(value_functions)
         cols = 3
         rows = (num_plots + cols - 1) // cols # Calculate number of rows needed
@@ -546,7 +660,7 @@ class Plotter:
         plt.tight_layout()
         plt.show()
 
-    def plot_grids_with_policies(self, env, grid_size, value_functions, names=None):
+    def plot_minigrids_with_policies(self, env, grid_size, value_functions, names=None):
         num_plots = len(value_functions)
         cols = 3
         rows = (num_plots + cols - 1) // cols  # Calculate number of rows needed
@@ -678,135 +792,5 @@ class Plotter:
         cbar.set_label('Value Function')
 
         plt.tight_layout(rect=[0, 0, 0.9, 1])
-        plt.show()
-
-
-class Minigrid_MDP_Plotter(Plotter):
-
-    def __init__(self, minigrid):
-        super().__init__()
-        self.minigrid = minigrid
-
-    def minigrid_demo(self):
-        print("Welcome to our Minigrid Interactive Demo")
-        action = np.random.choice(self.minigrid.n_actions)
-        a = input(f"       Select an Action from {self.minigrid.actions} (default {action}): ")
-        while a != 'e':
-            if a and a.isdigit():
-                action = int(a)
-                _, reward, terminated, truncated, info = self.minigrid.env.step(action)
-                print("Minigrid Step")
-                print("       Action:", action)
-                print("  Observation:", self.minigrid.observation())
-                print("       Reward:", reward)
-                print("         Done:", "terminated" if terminated else "truncated" if truncated else "False", )
-                print("         Info:", info)
-                self.minigrid.render()
-            else:
-                print("Invalid action.")
-            a = input(f"       Select an Action from {self.minigrid.actions} (default {action}, press 'e' to exit): ")
-
-    def state_visited_policy(self, policy):
-        state = self.minigrid.s0
-        states_visited = np.zeros((self.minigrid.n_states))
-        states_visited[state] = 1
-        n_steps = 0
-        while True:
-            n_steps += 1
-            next_state, _, done = self.minigrid.act(state, policy[state])
-            states_visited[next_state] = 1
-            if done:
-                break
-            else:
-                state = next_state
-
-            if n_steps > 100:
-                break
-
-        return states_visited
-
-    def plot_greedy_policy(self, greedy_policy, estimated=False, print_policy=False):
-        if print_policy: print(greedy_policy)
-        states_visited = self.state_visited_policy(greedy_policy)
-        plt.figure(figsize=(5, 2*self.minigrid.grid_size))
-        plt.imshow(states_visited.reshape((self.minigrid.n_cells,4)), cmap="Greys")
-        if estimated: plt.title("Estimated policy \n ( The states in black represent the states selected by the estimated policy)")
-        else: plt.title("Optimal policy \n ( The states in black represent the states selected by the Optimal policy)")
-        plt.xlabel("Orientation")
-        plt.ylabel("Cell Position")
-        y_labels = [f"{i//self.minigrid.grid_size + 1}x{i%self.minigrid.grid_size + 1}" for i in range(self.minigrid.n_cells)]
-        x_labels = [f"{i}" for i in range(self.minigrid.n_orientations)]
-        plt.yticks(range(self.minigrid.n_cells), y_labels)
-        plt.xticks(range(self.minigrid.n_orientations), x_labels)
-        plt.show()   
-
-    def plot_value_function(self, Q, print_values=False, plot_values=False, file = "value_function.txt"):
-        V = Q.max(axis=1)
-        if print_values: 
-            with open(file, "w") as f:
-                for s in range(self.minigrid.n_states):
-                    f.write("V({}): {}\n".format(self.minigrid.states[s], V[s]))
-                    f.write("Q({}): {}\n".format(self.minigrid.states[s], Q[s]))
-
-        if plot_values:
-
-            plt.figure(figsize=(5, 2*self.minigrid.grid_size))
-            im = plt.imshow(V.reshape((self.minigrid.n_cells,4)), vmin= V.min(), vmax=V.max())
-            colorbar_ticks = np.linspace(V.max(), V.min(), 10)
-            plt.colorbar(im, ticks=colorbar_ticks) 
-            plt.title("V(s)")
-            plt.xlabel("Orientation")
-            plt.ylabel("Cell Position")
-            y_labels = [f"{i//self.minigrid.grid_size + 1}x{i%self.minigrid.grid_size + 1}" for i in range(self.minigrid.n_cells)]
-            x_labels = [f"{i}" for i in range(self.minigrid.n_orientations)]
-            plt.yticks(range(self.minigrid.n_cells), y_labels)
-            plt.xticks(range(self.minigrid.n_orientations), x_labels)
-            plt.show()
-
-    def plot_path(self, policy, start = 0, path='MDP_policy_path.gif'):
-        self.minigrid.s0 = start if self.minigrid.s0 != start else self.minigrid.s0
-        s = self.minigrid.reset()
-        done = False
-        with imageio.get_writer(path, mode='I', duration=0.2, loop=10) as writer:
-            writer.append_data(self.minigrid.env.render())
-            while not (done and self.minigrid.is_goal(s)):
-                s, _, done = self.minigrid.step(s, policy[s]) if not self.minigrid.is_goal(s) else (start, 0, False)
-                writer.append_data(self.minigrid.env.render())
-        os.startfile(path)  # for windows
-
-    def plot_greedy_policy_square(self, greedy_policy):
-        states_visited = self.state_visited_policy(greedy_policy)
-        _, axs = plt.subplots(self.minigrid.grid_size, self.minigrid.grid_size, figsize=(30, 80))
-
-        # Calculate the number of orientations per cell
-        num_orientations = self.minigrid.n_orientations
-
-        # Iterate over each cell
-        for row in range(self.minigrid.grid_size):
-            for col in range(self.minigrid.grid_size):
-                ax = axs[row, col]
-
-                # Calculate the indices for the orientations of the current cell
-                base_index = self.minigrid.state_to_index[(col + 1, row + 1, 0)]
-                indices = [base_index + o for o in range(num_orientations)]
-
-                # Create an empty grid for the current cell
-                cell_grid = np.zeros((num_orientations, num_orientations))
-
-                # Mark visited states within the cell
-                for index in indices:
-                    if states_visited[index] == 1:
-                        orientation = index - base_index
-                        cell_grid[orientation % num_orientations, orientation // num_orientations] = 1
-
-                # Plot the grid for the current cell
-                ax.imshow(cell_grid, cmap="Greys", origin='upper')
-
-                # Set title and remove axes ticks
-                ax.set_title(f"Cell ({col+1}, {row+1})")
-                ax.axis("off")
-
-        plt.suptitle("Greedy Policy\n(The states in black represent the states selected by the greedy policy)")
-        plt.tight_layout(rect=[0, 0.03, 1, 0.95])
         plt.show()
     

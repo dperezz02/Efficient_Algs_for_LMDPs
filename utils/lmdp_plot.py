@@ -13,7 +13,6 @@ class Minigrid_LMDP_Plotter(Plotter):
         if print_Z:
             with open(file, "w") as f:
                 for s in range(self.lmdp.n_states):
-                    #print("Z value in state ", lmdp.states[s], ": ", Z[s])
                     f.write("Z({}): {}\n".format(self.lmdp.states[s], Z[s]))
         if plot_Z:
             plt.figure(figsize=(5, 2*self.lmdp.grid_size))
