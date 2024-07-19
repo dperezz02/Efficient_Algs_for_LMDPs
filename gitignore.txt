@@ -1,0 +1,8 @@
+/old
+/__pycache__
+/environments/__pycache__
+/algs/__pycache__
+/frameworks/__pycache__
+/plots
+/utils/__pycache__
+/videos
