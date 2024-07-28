@@ -5,6 +5,7 @@ from utils.plot import Plotter, Minigrid_MDP_Plotter
 from algs.zlearning import ZLearning, Zlearning_training
 from algs.qlearning import QLearning, Qlearning_training
 from utils.lmdp_plot import Minigrid_LMDP_Plotter
+import time
 
 simple6_map = [
     "########",
@@ -106,7 +107,7 @@ rooms18_map = [
 
 if __name__ == "__main__":
 
-    grid_size = 3
+    grid_size = 30
     wall_percentage = 10
     lava_percentage = 10
     objects = generate_random_walls_and_lavas(grid_size, wall_percentage, lava_percentage)
@@ -130,14 +131,27 @@ if __name__ == "__main__":
 
     Z, n_steps = minigrid_lmdp.power_iteration(epsilon=epsilon)
     V = minigrid_lmdp.Z_to_V(Z)
-    Z_2, n_steps_2 = minigrid_lmdp_transition.power_iteration(epsilon=epsilon)
-    V_2 = minigrid_lmdp_transition.Z_to_V(Z_2)
 
-    print(V, n_steps)
-    print(V_2, n_steps_2)
+    start_time = time.time()
+    for i in range(10):
+        minigrid_mdp, mse = minigrid_lmdp.embedding_to_MDP()
+    print("Time: ", (time.time() - start_time)/10)
+
+    start_time = time.time()
+    for i in range(10):
+        minigrid_mdp, mse = minigrid_lmdp_transition.embedding_to_MDP()
+    print("Time: ", (time.time() - start_time)/10)
+
+    # minigrid_mdp, mse = minigrid_lmdp.embedding_to_MDP()
+    # print(mse)
+    
+
+    # minigrid_mdp, mse = minigrid_lmdp_transition.embedding_to_MDP()
+    # print(mse)
+    
 
     # for s in range(minigrid_lmdp.n_nonterminal_states):
-    #     print("R[{}]: {}".format(minigrid_lmdp.states[s], minigrid_lmdp.R[s]))
+    #     print("R[{},:]: {}".format(minigrid_mdp.states[s], minigrid_mdp.R[s]))
     #     for s2 in range(minigrid_lmdp.n_states):
     #         print("R[{}][{}]: {}".format(minigrid_lmdp.states[s], minigrid_lmdp.states[s2], minigrid_lmdp_transition.R[s, s2]))
    

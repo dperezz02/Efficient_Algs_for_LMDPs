@@ -402,7 +402,7 @@ class Minigrid_LMDP_transition(LMDP_transition):
 
         self.grid_size = grid_size
         self.n_orientations = 4
-        self.J = {"goal": 0, "lava": -grid_size*6} # Determine reward function for terminal states
+        self.RJ = {"goal": 0, "lava": -grid_size*6} # Determine reward function for terminal states
         n_states, n_terminal_states = self._create_environment(grid_size, objects, map=map)
         
         super().__init__(n_states = n_states, n_terminal_states = n_terminal_states, lmbda=lmbda, s0=self.s0)
@@ -450,14 +450,20 @@ class Minigrid_LMDP_transition(LMDP_transition):
         if sparse:
             self.P0 = csr_matrix(self.P0)
 
-    def _reward_function(self):
-        """Create the reward function for the minigrid environment."""
+    def _reward_function(self, sparse=True):
+        """Create the reward functions for the minigrid environment."""
 
+        transitions = [self.env.actions.left, self.env.actions.right, self.env.actions.forward]
         for state in range(self.n_nonterminal_states):
-            self.R[:,state] = -1.0 #Doubt 3
-
+            for t in transitions:
+                next_state = self.state_step(self.states[state], t)
+                self.R[state, self.state_to_index[next_state]] = -1.0
+        
         for state in range(self.n_nonterminal_states, self.n_states):
-            self.R[:,state] = self.J[self._state_type(self.states[state])]
+            self.J[state-self.n_nonterminal_states] = self.RJ[self._state_type(self.states[state])]
+        
+        if sparse:
+            self.R = csr_matrix(self.R)
 
     def _is_valid_position(self, x: int, y: int) -> bool:
         """Testing whether a coordinate is a valid location."""
@@ -477,7 +483,7 @@ class Minigrid_LMDP_transition(LMDP_transition):
     def _is_terminal(self, state: tuple[int, int, int]) -> bool:
         """Check if a state is terminal."""
 
-        at_terminal = self._state_type(state) in self.J.keys()
+        at_terminal = self._state_type(state) in self.RJ.keys()
         return at_terminal
     
     def is_goal(self, s: int) -> bool:
