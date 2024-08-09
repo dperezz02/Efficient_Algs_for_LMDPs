@@ -7,8 +7,8 @@ class QLearning:
 
     If learning_rate is None; alpha(x,a) = 1/max(1, N(s,a))**alpha
     """
-    def __init__(self, mdp, gamma=0.99, epsilon=1, epsilon_decay=0.9995,
-                 epsilon_min=0, c = 1, reset_randomness = 0.0, seed=42):
+    def __init__(self, mdp, gamma=1, epsilon=1, epsilon_decay=0.999,
+                 epsilon_min=0, c = 1000000, reset_randomness = 0.0, seed=42):
         self.mdp = mdp
         self.gamma = gamma
         self.c = c

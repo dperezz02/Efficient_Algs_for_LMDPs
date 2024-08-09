@@ -82,7 +82,6 @@ class LMDP_transition(LMDP):
 
         for state in range(self.n_nonterminal_states):
             for a in range(mdp.n_actions):
-                #mdp.R[state,a] = np.dot(mdp.P[state, a, Pu[state].indices], R[state, Pu[state].indices]) - lmbda * np.dot(mdp.P[state, a, Pu[state].indices], np.log(mdp.P[state, a, Pu[state].indices]/P0[state, Pu[state].indices]))
                 mdp.R[state,a] = self.R[state, Pu[state].indices].dot(mdp.P[state, a, Pu[state].indices]) - lmbda * np.dot(mdp.P[state, a, Pu[state].indices], np.log(mdp.P[state, a, Pu[state].indices] / P0[state, Pu[state].indices]))
 
         # Compute the embedding error

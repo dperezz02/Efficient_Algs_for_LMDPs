@@ -412,7 +412,7 @@ class Minigrid_MDP_Plotter(Plotter):
             plt.xticks(range(self.minigrid.n_orientations), x_labels)
             plt.show()
 
-    def plot_path(self, policy, start = 0, path='MDP_policy_path.gif'):
+    def plot_path(self, policy, start = 0, path='videos\MDP_policy_path.gif'):
         self.minigrid.s0 = start if self.minigrid.s0 != start else self.minigrid.s0
         s = self.minigrid.reset()
         done = False

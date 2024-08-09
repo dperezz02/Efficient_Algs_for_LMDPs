@@ -56,7 +56,7 @@ class Minigrid_LMDP_Plotter(Plotter):
 
             plt.show()
 
-    def plot_sample_path(self, PU, start = 0, path = 'LMDP_PU_path.gif'):
+    def plot_sample_path(self, PU, start = 0, path = 'videos\LMDP_PU_path.gif'):
         self.lmdp.s0 = start if self.lmdp.s0 != start else self.lmdp.s0
         s = self.lmdp.reset()
         done = False

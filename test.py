@@ -113,7 +113,7 @@ if __name__ == "__main__":
     objects = generate_random_walls_and_lavas(grid_size, wall_percentage, lava_percentage)
     objects = {"walls":[], "lavas":[]}
 
-    grid_map = None
+    grid_map = maze18_map
     grid_size = len(grid_map)-2 if grid_map is not None else grid_size
 
     gamma = 1
@@ -123,24 +123,32 @@ if __name__ == "__main__":
 
     # MDP
     minigrid_mdp = Minigrid_MDP(grid_size=grid_size, objects = objects, map=grid_map, gamma=gamma)
+    minigrid_mdp_plotter = Minigrid_MDP_Plotter(minigrid_mdp)
+    minigrid_lmdp = Minigrid_LMDP(grid_size=grid_size, objects=objects, map=grid_map, lmbda=lmbda)
+    minigrid_lmdp_plotter = Minigrid_LMDP_Plotter(minigrid_lmdp)
+
+    minigrid_mdp.render()
+
+    Q, policy, n_steps = minigrid_mdp.value_iteration(epsilon=epsilon)
+    V = Q.max(axis=1)
 
 
     # minigrid_mdp_plots = Minigrid_MDP_Plotter(minigrid_mdp)
-    minigrid_lmdp = Minigrid_LMDP(grid_size=grid_size, objects=objects, map=grid_map, lmbda=lmbda)
-    minigrid_lmdp_transition = Minigrid_LMDP_transition(grid_size=grid_size, objects=objects, map=grid_map, lmbda=lmbda)
+    # minigrid_lmdp = Minigrid_LMDP(grid_size=grid_size, objects=objects, map=grid_map, lmbda=lmbda)
+    # minigrid_lmdp_transition = Minigrid_LMDP_transition(grid_size=grid_size, objects=objects, map=grid_map, lmbda=lmbda)
 
-    Z, n_steps = minigrid_lmdp.power_iteration(epsilon=epsilon)
-    V = minigrid_lmdp.Z_to_V(Z)
+    # Z, n_steps = minigrid_lmdp.power_iteration(epsilon=epsilon)
+    # V = minigrid_lmdp.Z_to_V(Z)
 
-    start_time = time.time()
-    for i in range(10):
-        minigrid_mdp, mse = minigrid_lmdp.embedding_to_MDP()
-    print("Time: ", (time.time() - start_time)/10)
+    # start_time = time.time()
+    # for i in range(10):
+    #     minigrid_mdp, mse = minigrid_lmdp.embedding_to_MDP()
+    # print("Time: ", (time.time() - start_time)/10)
 
-    start_time = time.time()
-    for i in range(10):
-        minigrid_mdp, mse = minigrid_lmdp_transition.embedding_to_MDP()
-    print("Time: ", (time.time() - start_time)/10)
+    # start_time = time.time()
+    # for i in range(10):
+    #     minigrid_mdp, mse = minigrid_lmdp_transition.embedding_to_MDP()
+    # print("Time: ", (time.time() - start_time)/10)
 
     # minigrid_mdp, mse = minigrid_lmdp.embedding_to_MDP()
     # print(mse)
