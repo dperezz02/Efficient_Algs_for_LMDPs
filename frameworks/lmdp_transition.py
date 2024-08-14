@@ -80,9 +80,17 @@ class LMDP_transition(LMDP):
                 rolled_indices = np.roll(indices, -a, axis=1).flatten()
                 mdp.P[source_states_repeated, a, rolled_indices] = Pu[source_states].data
 
-        for state in range(self.n_nonterminal_states):
-            for a in range(mdp.n_actions):
-                mdp.R[state,a] = self.R[state, Pu[state].indices].dot(mdp.P[state, a, Pu[state].indices]) - lmbda * np.dot(mdp.P[state, a, Pu[state].indices], np.log(mdp.P[state, a, Pu[state].indices] / P0[state, Pu[state].indices]))
+                # Perform element-wise product and summation using efficient sparse operations
+                R_data = self.R[source_states].data.reshape(-1, next_states)
+                Pu_data = Pu[source_states].data.reshape(-1, next_states)
+
+                # Use einsum or equivalent operation
+                mdp.R[source_states, a] = np.einsum('ij,ij->i', R_data, Pu_data) #TODO: Add KL divergence and check P0 sparse   
+
+        # for state in range(self.n_nonterminal_states):
+        #     for a in range(mdp.n_actions):
+        #         mdp.R[state,a] = self.R[state, Pu[state].indices].dot(mdp.P[state, a, Pu[state].indices]) - lmbda * np.dot(mdp.P[state, a, Pu[state].indices], np.log(mdp.P[state, a, Pu[state].indices] / P0[state, Pu[state].indices]))
+    
 
         # Compute the embedding error
         V_lmdp = self.Z_to_V(Z_opt)
